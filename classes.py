@@ -58,16 +58,16 @@ class Plus(Expr):
             #       a  bc  d
             # Case 1: a and c are the same object
             if str(self.left.left) == str(self.right.left):
-                return Multiply(Plus(self.left.right, self.right.right).simplify(), self.left.left)
+                return Multiply(Plus(self.left.right, self.right.right).simplify(), self.left.left.simplify())
             # Case 2: a and d are the same object
             elif str(self.left.left) == str(self.right.right):
-                return Multiply(Plus(self.left.right, self.right.left).simplify(), self.left.left)
+                return Multiply(Plus(self.left.right, self.right.left).simplify(), self.left.left.simplify())
             # Case 3: b and c are the same object
             elif str(self.left.right) == str(self.right.left):
-                return Multiply(Plus(self.left.left, self.right.right).simplify(), self.left.right)
+                return Multiply(Plus(self.left.left, self.right.right).simplify(), self.left.right.simplify())
             # Case 4: b and d are the same object
             elif str(self.left.right) == str(self.right.right):
-                return Multiply(Plus(self.left.left, self.right.left).simplify(), self.left.right)
+                return Multiply(Plus(self.left.left, self.right.left).simplify(), self.left.right.simplify())
 
         return Plus(self.left.simplify(), self.right.simplify())
 
