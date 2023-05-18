@@ -9,8 +9,11 @@ class Expr:
         return NotImplementedError
 
     def differentiate(self, respect_to: str) -> Any:
-        """Differentiate the expression.
-        """
+        """Differentiate the expression."""
+        return NotImplementedError
+
+    def simplify(self) -> Any:
+        """Simplify the expression."""
         return NotImplementedError
 
 
@@ -33,6 +36,41 @@ class Plus(Expr):
 
     def differentiate(self, respect_to: str) -> Expr:
         return Plus(self.left.differentiate(respect_to), self.right.differentiate(respect_to))
+
+    def simplify(self) -> Expr:
+        # Adding two concrete numbers
+        if isinstance(self.left, Num) and isinstance(self.right, Num):
+            if not isinstance(self.left.n, str) and not isinstance(self.right.n, str):
+                return Num(self.left.n + self.right.n)
+        # self.left is 0
+        elif isinstance(self.left, Num) and self.left.n == 0:
+            return self.right.simplify()
+        # self.right is 0
+        elif isinstance(self.right, Num) and self.right.n == 0:
+            return self.left.simplify()
+
+        # Adding two terms in the form of Multiply + Multiply
+        elif isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
+            #           o
+            #          /\
+            #         o  o
+            #        /\  /\
+            #       a  bc  d
+            # Case 1: a and c are the same object
+            if str(self.left.left) == str(self.right.left):
+                return Multiply(Plus(self.left.right, self.right.right).simplify(), self.left.left)
+            # Case 2: a and d are the same object
+            elif str(self.left.left) == str(self.right.right):
+                return Multiply(Plus(self.left.right, self.right.left).simplify(), self.left.left)
+            # Case 3: b and c are the same object
+            elif str(self.left.right) == str(self.right.left):
+                return Multiply(Plus(self.left.left, self.right.right).simplify(), self.left.right)
+            # Case 4: b and d are the same object
+            elif str(self.left.right) == str(self.right.right):
+                return Multiply(Plus(self.left.left, self.right.left).simplify(), self.left.right)
+
+        return Plus(self.left.simplify(), self.right.simplify())
+
 
 
 class Multiply(Expr):
@@ -61,6 +99,21 @@ class Multiply(Expr):
 
         return Plus(Multiply(self.left.differentiate(respect_to), self.right), Multiply(self.left, self.right.differentiate(respect_to)))
 
+    def simplify(self) -> Expr:
+        if isinstance(self.left, Num):
+            if self.left.n == 1:
+                return self.right.simplify()
+            if self.left.n == 0:
+                return Num(0)
+
+        if isinstance(self.right, Num):
+            if self.right.n == 1:
+                return self.left.simplify()
+            if self.right.n == 0:
+                return Num(0)
+
+        return Multiply(self.left.simplify(), self.right.simplify())
+
 
 class Num(Expr):
     """Represents a constant number.
@@ -78,6 +131,9 @@ class Num(Expr):
 
     def differentiate(self, respect_to: str) -> Expr:
         return Num(0)
+
+    def simplify(self) -> Expr:
+        return self
 
 
 class Power(Expr):
@@ -105,6 +161,9 @@ class Power(Expr):
         if not isinstance(self.base, Num) and isinstance(self.exponent, Num) and isinstance(self.exponent.n, int):
             return Multiply(Multiply(self.exponent, Power(self.base, Num(self.exponent.n - 1))), self.base.differentiate(respect_to))
 
+    def simplify(self) -> Expr:
+        return Power(self.base.simplify(), self.exponent.simplify())
+
 
 class Var(Expr):
     """Represents a single variable.
@@ -125,6 +184,9 @@ class Var(Expr):
             return Num(1)
         else:
             return self
+
+    def simplify(self) -> Expr:
+        return self
 
 
 class Trig(Expr):
@@ -155,3 +217,6 @@ class Trig(Expr):
         if self.name == 'tan':
             return Multiply(Power(Trig('sec', self.param), Num(2)), self.param.differentiate(respect_to))
         # Implement sec csc cot as well
+
+    def simplify(self) -> Expr:
+        return Trig(self.name, self.param.simplify())
