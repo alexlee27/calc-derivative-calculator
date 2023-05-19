@@ -38,10 +38,9 @@ class Plus(Expr):
         return Plus(self.left.differentiate(respect_to), self.right.differentiate(respect_to))
 
     def simplify(self) -> Expr:
-        # Num + Num
-        if isinstance(self.left, Num) and isinstance(self.right, Num):
-            if not isinstance(self.left.n, str) and not isinstance(self.right.n, str):
-                return Num(self.left.n + self.right.n)
+        # self.left == self.right
+        if str(self.left) == str(self.right):
+            return Multiply(Num(2), self.left.simplify()).simplify()
         # self.left is Num(0)
         elif isinstance(self.left, Num) and self.left.n == 0:
             return self.right.simplify()
@@ -110,14 +109,16 @@ class Multiply(Expr):
         if isinstance(self.left, Num):
             if self.left.n == 1:
                 return self.right.simplify()
-            if self.left.n == 0:
+            elif self.left.n == 0:
                 return Num(0)
 
-        if isinstance(self.right, Num):
+        elif isinstance(self.right, Num):
             if self.right.n == 1:
                 return self.left.simplify()
-            if self.right.n == 0:
+            elif self.right.n == 0:
                 return Num(0)
+
+        elif
 
         return Multiply(self.left.simplify(), self.right.simplify())
 
