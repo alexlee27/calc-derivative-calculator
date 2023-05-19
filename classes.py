@@ -38,18 +38,18 @@ class Plus(Expr):
         return Plus(self.left.differentiate(respect_to), self.right.differentiate(respect_to))
 
     def simplify(self) -> Expr:
-        # Adding two concrete numbers
+        # Num + Num
         if isinstance(self.left, Num) and isinstance(self.right, Num):
             if not isinstance(self.left.n, str) and not isinstance(self.right.n, str):
                 return Num(self.left.n + self.right.n)
-        # self.left is 0
+        # self.left is Num(0)
         elif isinstance(self.left, Num) and self.left.n == 0:
             return self.right.simplify()
-        # self.right is 0
+        # self.right is Num(0)
         elif isinstance(self.right, Num) and self.right.n == 0:
             return self.left.simplify()
 
-        # Adding two terms in the form of Multiply + Multiply
+        # Multiply + Multiply
         elif isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
             #           +
             #          / \
@@ -69,13 +69,15 @@ class Plus(Expr):
             elif str(self.left.right) == str(self.right.right):
                 return Multiply(Plus(self.left.left.simplify(), self.right.left.simplify()).simplify(), self.left.right.simplify()).simplify()
 
-        # simplified = Plus(self.left.simplify(), self.right.simplify()).simplify()
+        # Multiply + Expr or Expr + Multiply
+        elif isinstance(self.left, Multiply) or isinstance(self.right, Multiply):
+            return Plus(self.left.simplify(), self.right.simplify()).simplify()
 
-        # Preventing infinite recursion (base case)
-        # if str(simplified) == str(self):
-        #     return self
-        # else:
-        return Plus(self.left.simplify(), self.right.simplify()).simplify()
+        # Plus + Plus or Plus + Expr or Expr + Plus
+        elif isinstance(self.left, Plus) or isinstance(self.right, Plus):
+            return Plus(self.left.simplify(), self.right.simplify()).simplify()
+
+        return Plus(self.left.simplify(), self.right.simplify())
 
 
 class Multiply(Expr):
