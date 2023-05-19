@@ -51,26 +51,31 @@ class Plus(Expr):
 
         # Adding two terms in the form of Multiply + Multiply
         elif isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
-            #           o
-            #          /\
-            #         o  o
-            #        /\  /\
-            #       a  bc  d
+            #           +
+            #          / \
+            #         *   *
+            #        /\   /\
+            #       a  b c  d
             # Case 1: a and c are the same object
             if str(self.left.left) == str(self.right.left):
-                return Multiply(Plus(self.left.right, self.right.right).simplify(), self.left.left.simplify())
+                return Multiply(Plus(self.left.right.simplify(), self.right.right.simplify()).simplify(), self.left.left.simplify()).simplify()
             # Case 2: a and d are the same object
             elif str(self.left.left) == str(self.right.right):
-                return Multiply(Plus(self.left.right, self.right.left).simplify(), self.left.left.simplify())
+                return Multiply(Plus(self.left.right.simplify(), self.right.left.simplify()).simplify(), self.left.left.simplify()).simplify()
             # Case 3: b and c are the same object
             elif str(self.left.right) == str(self.right.left):
-                return Multiply(Plus(self.left.left, self.right.right).simplify(), self.left.right.simplify())
+                return Multiply(Plus(self.left.left.simplify(), self.right.right.simplify()).simplify(), self.left.right.simplify()).simplify()
             # Case 4: b and d are the same object
             elif str(self.left.right) == str(self.right.right):
-                return Multiply(Plus(self.left.left, self.right.left).simplify(), self.left.right.simplify())
+                return Multiply(Plus(self.left.left.simplify(), self.right.left.simplify()).simplify(), self.left.right.simplify()).simplify()
 
-        return Plus(self.left.simplify(), self.right.simplify())
+        # simplified = Plus(self.left.simplify(), self.right.simplify()).simplify()
 
+        # Preventing infinite recursion (base case)
+        # if str(simplified) == str(self):
+        #     return self
+        # else:
+        return Plus(self.left.simplify(), self.right.simplify()).simplify()
 
 
 class Multiply(Expr):
