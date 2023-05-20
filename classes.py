@@ -118,7 +118,8 @@ class Multiply(Expr):
             elif self.right.n == 0:
                 return Num(0)
 
-        # elif
+        elif str(self.left) == str(self.right):
+            return Power(self.left.simplify(), Num(2))
 
         return Multiply(self.left.simplify(), self.right.simplify())
 
