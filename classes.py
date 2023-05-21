@@ -47,6 +47,9 @@ class Plus(Expr):
         # self.right is Num(0)
         elif isinstance(self.right, Num) and self.right.n == 0:
             return self.left.simplify()
+        # Num + Num
+        elif isinstance(self.left, Num) and isinstance(self.right, Num):
+            return Num(self.left.n + self.right.n)
 
         # Multiply + Multiply
         elif isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
@@ -120,6 +123,11 @@ class Multiply(Expr):
 
         elif str(self.left) == str(self.right):
             return Power(self.left.simplify(), Num(2))
+
+        # Power * Power with same bases
+        elif isinstance(self.left, Power) and isinstance(self.right, Power) and str(self.left.base) == str(self.right.base):
+            return Power(self.left.base.simplify(), Plus(self.left.exponent.simplify(), self.right.exponent.simplify()).simplify())
+
 
         return Multiply(self.left.simplify(), self.right.simplify())
 
