@@ -124,10 +124,12 @@ class Multiply(Expr):
         elif str(self.left) == str(self.right):
             return Power(self.left.simplify(), Num(2))
 
+        elif isinstance(self.left, Num) and isinstance(self.right, Num):
+            return Num(self.left.n * self.right.n)
+
         # Power * Power with same bases
         elif isinstance(self.left, Power) and isinstance(self.right, Power) and str(self.left.base) == str(self.right.base):
             return Power(self.left.base.simplify(), Plus(self.left.exponent.simplify(), self.right.exponent.simplify()).simplify())
-
 
         return Multiply(self.left.simplify(), self.right.simplify())
 
