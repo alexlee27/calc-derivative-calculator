@@ -60,24 +60,28 @@ class Plus(Expr):
             #       a  b c  d
             # Case 1: a and c are the same object
             if str(self.left.left) == str(self.right.left):
-                return Multiply(Plus(self.left.right.simplify(), self.right.right.simplify()).simplify(), self.left.left.simplify()).simplify()
+                return Multiply(Plus(self.left.right.simplify(), self.right.right.simplify()).simplify(),
+                                self.left.left.simplify()).simplify()
             # Case 2: a and d are the same object
             if str(self.left.left) == str(self.right.right):
-                return Multiply(Plus(self.left.right.simplify(), self.right.left.simplify()).simplify(), self.left.left.simplify()).simplify()
+                return Multiply(Plus(self.left.right.simplify(), self.right.left.simplify()).simplify(),
+                                self.left.left.simplify()).simplify()
             # Case 3: b and c are the same object
             if str(self.left.right) == str(self.right.left):
-                return Multiply(Plus(self.left.left.simplify(), self.right.right.simplify()).simplify(), self.left.right.simplify()).simplify()
+                return Multiply(Plus(self.left.left.simplify(), self.right.right.simplify()).simplify(),
+                                self.left.right.simplify()).simplify()
             # Case 4: b and d are the same object
             if str(self.left.right) == str(self.right.right):
-                return Multiply(Plus(self.left.left.simplify(), self.right.left.simplify()).simplify(), self.left.right.simplify()).simplify()
+                return Multiply(Plus(self.left.left.simplify(), self.right.left.simplify()).simplify(),
+                                self.left.right.simplify()).simplify()
 
-        # Multiply + Expr or Expr + Multiply
-        if isinstance(self.left, Multiply) or isinstance(self.right, Multiply):
-            return Plus(self.left.simplify(), self.right.simplify()).simplify()
-
-        # Plus + Plus or Plus + Expr or Expr + Plus
-        if isinstance(self.left, Plus) or isinstance(self.right, Plus):
-            return Plus(self.left.simplify(), self.right.simplify()).simplify()
+        # # Multiply + Expr or Expr + Multiply
+        # if isinstance(self.left, Multiply) or isinstance(self.right, Multiply):
+        #     result = Plus(self.left.simplify(), self.right.simplify()).simplify()
+        #
+        # # Plus + Plus or Plus + Expr or Expr + Plus
+        # if isinstance(self.left, Plus) or isinstance(self.right, Plus):
+        #     return Plus(self.left.simplify(), self.right.simplify()).simplify()
 
         return Plus(self.left.simplify(), self.right.simplify())
 
@@ -106,7 +110,8 @@ class Multiply(Expr):
         if isinstance(self.right, Num) and not isinstance(self.left, Num):
             return Multiply(self.right, self.left.differentiate(respect_to))
 
-        return Plus(Multiply(self.left.differentiate(respect_to), self.right), Multiply(self.left, self.right.differentiate(respect_to)))
+        return Plus(Multiply(self.left.differentiate(respect_to), self.right),
+                    Multiply(self.left, self.right.differentiate(respect_to)))
 
     def simplify(self) -> Expr:
         if isinstance(self.left, Num):
@@ -258,7 +263,7 @@ class Trig(Expr):
         - param: the parameter passed into the trig function
 
     Representation Invariants:
-        - self.name in {'sin', 'cos', 'tan', 'sec', 'csc', 'cot'}
+        - self.name in {'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan'}
     """
     name: str
     param: Expr
