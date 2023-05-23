@@ -42,17 +42,17 @@ class Plus(Expr):
         if str(self.left) == str(self.right):
             return Multiply(Num(2), self.left.simplify()).simplify()
         # self.left is Num(0)
-        elif isinstance(self.left, Num) and self.left.n == 0:
+        if isinstance(self.left, Num) and self.left.n == 0:
             return self.right.simplify()
         # self.right is Num(0)
-        elif isinstance(self.right, Num) and self.right.n == 0:
+        if isinstance(self.right, Num) and self.right.n == 0:
             return self.left.simplify()
         # Num + Num
-        elif isinstance(self.left, Num) and isinstance(self.right, Num):
+        if isinstance(self.left, Num) and isinstance(self.right, Num):
             return Num(self.left.n + self.right.n)
 
         # Multiply + Multiply
-        elif isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
+        if isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
             #           +
             #          / \
             #         *   *
@@ -62,21 +62,21 @@ class Plus(Expr):
             if str(self.left.left) == str(self.right.left):
                 return Multiply(Plus(self.left.right.simplify(), self.right.right.simplify()).simplify(), self.left.left.simplify()).simplify()
             # Case 2: a and d are the same object
-            elif str(self.left.left) == str(self.right.right):
+            if str(self.left.left) == str(self.right.right):
                 return Multiply(Plus(self.left.right.simplify(), self.right.left.simplify()).simplify(), self.left.left.simplify()).simplify()
             # Case 3: b and c are the same object
-            elif str(self.left.right) == str(self.right.left):
+            if str(self.left.right) == str(self.right.left):
                 return Multiply(Plus(self.left.left.simplify(), self.right.right.simplify()).simplify(), self.left.right.simplify()).simplify()
             # Case 4: b and d are the same object
-            elif str(self.left.right) == str(self.right.right):
+            if str(self.left.right) == str(self.right.right):
                 return Multiply(Plus(self.left.left.simplify(), self.right.left.simplify()).simplify(), self.left.right.simplify()).simplify()
 
         # Multiply + Expr or Expr + Multiply
-        elif isinstance(self.left, Multiply) or isinstance(self.right, Multiply):
+        if isinstance(self.left, Multiply) or isinstance(self.right, Multiply):
             return Plus(self.left.simplify(), self.right.simplify()).simplify()
 
         # Plus + Plus or Plus + Expr or Expr + Plus
-        elif isinstance(self.left, Plus) or isinstance(self.right, Plus):
+        if isinstance(self.left, Plus) or isinstance(self.right, Plus):
             return Plus(self.left.simplify(), self.right.simplify()).simplify()
 
         return Plus(self.left.simplify(), self.right.simplify())
@@ -115,21 +115,63 @@ class Multiply(Expr):
             elif self.left.n == 0:
                 return Num(0)
 
-        elif isinstance(self.right, Num):
+        if isinstance(self.right, Num):
             if self.right.n == 1:
                 return self.left.simplify()
             elif self.right.n == 0:
                 return Num(0)
 
-        elif str(self.left) == str(self.right):
+        if str(self.left) == str(self.right):
             return Power(self.left.simplify(), Num(2))
 
-        elif isinstance(self.left, Num) and isinstance(self.right, Num):
+        if isinstance(self.left, Num) and isinstance(self.right, Num):
             return Num(self.left.n * self.right.n)
 
         # Power * Power with same bases
-        elif isinstance(self.left, Power) and isinstance(self.right, Power) and str(self.left.base) == str(self.right.base):
+        if isinstance(self.left, Power) and isinstance(self.right, Power) and str(self.left.base) == str(self.right.base):
             return Power(self.left.base.simplify(), Plus(self.left.exponent.simplify(), self.right.exponent.simplify()).simplify())
+
+        # <some_type> * (<some_type> * Expr)
+        if isinstance(self.right, Multiply) and type(self.left) == type(self.right.left):
+            return Multiply(Multiply(self.left.simplify(), self.right.left.simplify()).simplify(), self.right.right.simplify()).simplify()
+
+        # <some_type> * (Expr * <some_type>)
+        if isinstance(self.right, Multiply) and type(self.left) == type(self.right.right):
+            return Multiply(Multiply(self.left.simplify(), self.right.right.simplify()).simplify(), self.right.left.simplify()).simplify()
+
+        # (<some_type> * Expr) * <some_type>
+        if isinstance(self.left, Multiply) and type(self.right) == type(self.left.left):
+            return Multiply(Multiply(self.right.simplify(), self.left.left.simplify()).simplify(),
+                            self.left.right.simplify()).simplify()
+
+        # (Expr * <some_type>) * <some_type>
+        if isinstance(self.left, Multiply) and type(self.right) == type(self.left.right):
+            return Multiply(Multiply(self.right.simplify(), self.left.right.simplify()).simplify(),
+                            self.left.left.simplify()).simplify()
+
+        # Multiply * Multiply
+        if isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
+            #           *
+            #          / \
+            #         *   *
+            #        /\   /\
+            #       a  b c  d
+            # Case 1: a and c are the same type
+            if type(self.left.left) == type(self.right.left):
+                return Multiply(Multiply(self.left.left.simplify(), self.right.left.simplify()).simplify(),
+                                Multiply(self.left.right.simplify(), self.right.right.simplify()).simplify()).simplify()
+            # Case 2: a and d are the same type
+            if type(self.left.left) == type(self.right.right):
+                return Multiply(Multiply(self.left.left.simplify(), self.right.right.simplify()).simplify(),
+                                Multiply(self.left.right.simplify(), self.right.left.simplify()).simplify()).simplify()
+            # Case 3: b and c are the same type
+            if type(self.left.right) == type(self.right.left):
+                return Multiply(Multiply(self.left.right.simplify(), self.right.left.simplify()).simplify(),
+                                Multiply(self.left.left.simplify(), self.right.right.simplify()).simplify()).simplify()
+            # Case 4: b and d are the same type
+            if type(self.left.right) == type(self.right.right):
+                return Multiply(Multiply(self.left.right.simplify(), self.right.right.simplify()).simplify(),
+                                Multiply(self.left.left.simplify(), self.right.left.simplify()).simplify()).simplify()
 
         return Multiply(self.left.simplify(), self.right.simplify())
 
