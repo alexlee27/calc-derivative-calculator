@@ -84,7 +84,7 @@ G = pydot.Dot(graph_type="digraph")
 G.size = "7.75,10.25"
 
 # Example tree below
-tree = Plus(Plus(Multiply(Num(5), Power(Var('x'), Num(2))), Multiply(Num(4), Power(Var('x'), Num(2)))), Var('x'))
+tree = Multiply(Trig('sin', Var('x')), Power(Trig('cos', Var('x')), Num(-1))).differentiate('x')
 
 tree_to_svg(G, tree, set(), 0)
 

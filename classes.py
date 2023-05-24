@@ -133,16 +133,20 @@ class Multiply(Expr):
             return Num(self.left.n * self.right.n)
 
         # Power * Power with same bases
-        if isinstance(self.left, Power) and isinstance(self.right, Power) and str(self.left.base) == str(self.right.base):
-            return Power(self.left.base.simplify(), Plus(self.left.exponent.simplify(), self.right.exponent.simplify()).simplify())
+        if isinstance(self.left, Power) and isinstance(self.right, Power) \
+                and str(self.left.base) == str(self.right.base):
+            return Power(self.left.base.simplify(),
+                         Plus(self.left.exponent.simplify(), self.right.exponent.simplify()).simplify())
 
         # <some_type> * (<some_type> * Expr)
         if isinstance(self.right, Multiply) and type(self.left) == type(self.right.left):
-            return Multiply(Multiply(self.left.simplify(), self.right.left.simplify()).simplify(), self.right.right.simplify()).simplify()
+            return Multiply(Multiply(self.left.simplify(),
+                                     self.right.left.simplify()).simplify(), self.right.right.simplify()).simplify()
 
         # <some_type> * (Expr * <some_type>)
         if isinstance(self.right, Multiply) and type(self.left) == type(self.right.right):
-            return Multiply(Multiply(self.left.simplify(), self.right.right.simplify()).simplify(), self.right.left.simplify()).simplify()
+            return Multiply(Multiply(self.left.simplify(),
+                                     self.right.right.simplify()).simplify(), self.right.left.simplify()).simplify()
 
         # (<some_type> * Expr) * <some_type>
         if isinstance(self.left, Multiply) and type(self.right) == type(self.left.left):
@@ -213,11 +217,16 @@ class Power(Expr):
     exponent: Expr
 
     def __init__(self, base: Expr, exponent: Expr) -> None:
-        self.base = base
-        self.exponent = exponent
+        try:
+            if isinstance(base, Num) and base.n == 0 and isinstance(exponent, Num) and exponent.n < 0:
+                raise ZeroDivisionError
+            self.base = base
+            self.exponent = exponent
+        except ZeroDivisionError:
+            print('You may not divide by zero. Please try again!')
 
     def __str__(self) -> str:
-        return '(' + str(self.base) + ')^' + str(self.exponent)
+        return '(' + str(self.base) + ')^' + '(' + str(self.exponent) + ')'
 
     def differentiate(self, respect_to: str) -> Expr:
         if isinstance(self.base, Num) and isinstance(self.exponent, Num):
@@ -225,7 +234,8 @@ class Power(Expr):
 
         # Power rule
         if not isinstance(self.base, Num) and isinstance(self.exponent, Num) and isinstance(self.exponent.n, int):
-            return Multiply(Multiply(self.exponent, Power(self.base, Num(self.exponent.n - 1))), self.base.differentiate(respect_to))
+            return Multiply(Multiply(self.exponent,
+                                     Power(self.base, Num(self.exponent.n - 1))), self.base.differentiate(respect_to))
 
     def simplify(self) -> Expr:
         return Power(self.base.simplify(), self.exponent.simplify())
@@ -277,12 +287,54 @@ class Trig(Expr):
 
     def differentiate(self, respect_to: str) -> Expr:
         if self.name == 'sin':
-            return Multiply(Trig('cos', self.param), self.param.differentiate(respect_to))
+            return Multiply(Trig('cos', self.param),
+                            self.param.differentiate(respect_to)
+                            )
         if self.name == 'cos':
-            return Multiply(Multiply(Num(-1), Trig('cos', self.param)), self.param.differentiate(respect_to))
+            return Multiply(Num(-1),
+                            Multiply(Trig('sin', self.param),
+                                     self.param.differentiate(respect_to)
+                                     )
+                            )
         if self.name == 'tan':
-            return Multiply(Power(Trig('sec', self.param), Num(2)), self.param.differentiate(respect_to))
-        # Implement sec csc cot as well
+            return Multiply(Power(Trig('sec', self.param), Num(2)),
+                            self.param.differentiate(respect_to)
+                            )
+        if self.name == 'sec':
+            return Multiply(Trig('sec', self.param),
+                            Multiply(Trig('tan', self.param),
+                                     self.param.differentiate(respect_to)
+                                     )
+                            )
+        if self.name == 'csc':
+            return Multiply(Num(-1),
+                            Multiply(Trig('csc', Var('x')),
+                                     Multiply(Trig('cot', Var('x')),
+                                              self.param.differentiate(respect_to)
+                                              )
+                                     )
+                            )
+        if self.name == 'cot':
+            return Multiply(Num(-1),
+                            Multiply(Power(Trig('csc', self.param), Num(2)),
+                                     self.param.differentiate(respect_to)
+                                     )
+                            )
+
+        # if self.name == 'arcsin':
+            # return Multiply(Num(1), )
 
     def simplify(self) -> Expr:
         return Trig(self.name, self.param.simplify())
+
+
+# class DivisionByZeroError(Exception):
+#     """Exception raised when division by zero occurs.
+#
+#     Instance Attributes:
+#         - msg: Message displayed when the error is raised
+#     """
+#     msg: str
+#
+#     def __init__(self) -> None:
+#         self.msg = 'You may NOT divide by zero. Try again!'
