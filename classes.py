@@ -321,20 +321,19 @@ class Trig(Expr):
                                      )
                             )
 
-        # if self.name == 'arcsin':
-            # return Multiply(Num(1), )
+        if self.name == 'arcsin':
+            return Multiply(self.param.differentiate(respect_to),
+                            Power(Plus(Num(1),
+                                       Multiply(Num(-1),
+                                                Power(self.param,
+                                                      Num(2)))), Num(-0.5))
+                            )
+        if self.name == 'arccos':
+            return Multiply(Num(-1), Trig('arcsin', self.param).differentiate(respect_to))
+        if self.name == 'arctan':
+            return Multiply(self.param.differentiate(respect_to),
+                            Power(Plus(Power(self.param, Num(2)), Num(1)), Num(-1))
+                            )
 
     def simplify(self) -> Expr:
         return Trig(self.name, self.param.simplify())
-
-
-# class DivisionByZeroError(Exception):
-#     """Exception raised when division by zero occurs.
-#
-#     Instance Attributes:
-#         - msg: Message displayed when the error is raised
-#     """
-#     msg: str
-#
-#     def __init__(self) -> None:
-#         self.msg = 'You may NOT divide by zero. Try again!'
