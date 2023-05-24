@@ -75,7 +75,7 @@ def tree_to_svg(G: pydot.Dot, tree: Expr, visited_names: set, identifier: int) -
 
     if isinstance(tree, Trig):
         # Recurse into the parameter
-        tree_to_svg(G, tree.param, visited_names, new_identifier)
+        tree_to_svg(G, tree.arg, visited_names, new_identifier)
         edge = pydot.Edge(root_name, str(new_identifier))
         G.add_edge(edge)
 

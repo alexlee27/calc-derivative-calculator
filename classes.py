@@ -190,6 +190,8 @@ class Num(Expr):
 
     Instance Attributes:
         - n: the number self represents
+            - 'e' represents Euler's number
+            - 'pi' represents π (the ratio of a circle's circumference to its diameter)
     """
     n: int | float | str
 
@@ -230,12 +232,16 @@ class Power(Expr):
 
     def differentiate(self, respect_to: str) -> Expr:
         if isinstance(self.base, Num) and isinstance(self.exponent, Num):
-            return self
+            return Num(0)
 
         # Power rule
         if not isinstance(self.base, Num) and isinstance(self.exponent, Num) and isinstance(self.exponent.n, int):
             return Multiply(Multiply(self.exponent,
                                      Power(self.base, Num(self.exponent.n - 1))), self.base.differentiate(respect_to))
+
+        # e ^ f(x)
+        if isinstance(self.base, Num) and self.base.n == 'e':
+            return Multiply(self, self.exponent.differentiate(respect_to))
 
     def simplify(self) -> Expr:
         return Power(self.base.simplify(), self.exponent.simplify())
@@ -270,70 +276,143 @@ class Trig(Expr):
 
     Instance Attributes:
         - name: the name of the trig function
-        - param: the parameter passed into the trig function
+        - arg: the argument passed into the trig function
 
     Representation Invariants:
         - self.name in {'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan'}
     """
     name: str
-    param: Expr
+    arg: Expr
+    VALID_NAMES = {'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan'}
 
-    def __init__(self, name: str, param: Expr) -> None:
-        self.name = name
-        self.param = param
+    def __init__(self, name: str, arg: Expr) -> None:
+        try:
+            if self.name not in self.VALID_NAMES:
+                raise TrigError
+            self.name = name
+            self.arg = arg
+        except TrigError as error:
+            print(error.msg)
 
     def __str__(self) -> str:
-        return self.name + '(' + str(self.param) + ')'
+        return self.name + '(' + str(self.arg) + ')'
 
     def differentiate(self, respect_to: str) -> Expr:
         if self.name == 'sin':
-            return Multiply(Trig('cos', self.param),
-                            self.param.differentiate(respect_to)
+            return Multiply(Trig('cos', self.arg),
+                            self.arg.differentiate(respect_to)
                             )
         if self.name == 'cos':
             return Multiply(Num(-1),
-                            Multiply(Trig('sin', self.param),
-                                     self.param.differentiate(respect_to)
+                            Multiply(Trig('sin', self.arg),
+                                     self.arg.differentiate(respect_to)
                                      )
                             )
         if self.name == 'tan':
-            return Multiply(Power(Trig('sec', self.param), Num(2)),
-                            self.param.differentiate(respect_to)
+            return Multiply(Power(Trig('sec', self.arg), Num(2)),
+                            self.arg.differentiate(respect_to)
                             )
         if self.name == 'sec':
-            return Multiply(Trig('sec', self.param),
-                            Multiply(Trig('tan', self.param),
-                                     self.param.differentiate(respect_to)
+            return Multiply(Trig('sec', self.arg),
+                            Multiply(Trig('tan', self.arg),
+                                     self.arg.differentiate(respect_to)
                                      )
                             )
         if self.name == 'csc':
             return Multiply(Num(-1),
                             Multiply(Trig('csc', Var('x')),
                                      Multiply(Trig('cot', Var('x')),
-                                              self.param.differentiate(respect_to)
+                                              self.arg.differentiate(respect_to)
                                               )
                                      )
                             )
         if self.name == 'cot':
             return Multiply(Num(-1),
-                            Multiply(Power(Trig('csc', self.param), Num(2)),
-                                     self.param.differentiate(respect_to)
+                            Multiply(Power(Trig('csc', self.arg), Num(2)),
+                                     self.arg.differentiate(respect_to)
                                      )
                             )
 
         if self.name == 'arcsin':
-            return Multiply(self.param.differentiate(respect_to),
+            return Multiply(self.arg.differentiate(respect_to),
                             Power(Plus(Num(1),
                                        Multiply(Num(-1),
-                                                Power(self.param,
+                                                Power(self.arg,
                                                       Num(2)))), Num(-0.5))
                             )
         if self.name == 'arccos':
-            return Multiply(Num(-1), Trig('arcsin', self.param).differentiate(respect_to))
+            return Multiply(Num(-1), Trig('arcsin', self.arg).differentiate(respect_to))
         if self.name == 'arctan':
-            return Multiply(self.param.differentiate(respect_to),
-                            Power(Plus(Power(self.param, Num(2)), Num(1)), Num(-1))
+            return Multiply(self.arg.differentiate(respect_to),
+                            Power(Plus(Power(self.arg, Num(2)), Num(1)), Num(-1))
                             )
 
     def simplify(self) -> Expr:
-        return Trig(self.name, self.param.simplify())
+        return Trig(self.name, self.arg.simplify())
+
+
+class Log(Expr):
+    """Represents a logarithmic function.
+
+    Instance Attributes:
+        - base: the base of the logarithm
+        - arg: the argument of the logarithm
+
+    Representation Invariants:
+        - isinstance(self.base, Num)
+    """
+    def __init__(self, base: Num, arg: Expr) -> None:
+        try:
+            if isinstance(arg, Num) and arg.n == 0:
+                raise LogZeroError
+            self.base = base
+            self.arg = arg
+        except LogZeroError as error:
+            print(error.msg)
+
+    def __str__(self) -> str:
+        if self.base.n == 'e':
+            return 'ln(' + str(self.arg) + ')'
+        else:
+            return 'log' + str(self.base) + '(' + str(self.arg) + ')'
+
+    def differentiate(self, respect_to: str) -> Expr:
+        if not isinstance(self.arg, Num):
+            if self.base.n == 'e':
+                return Multiply(self.arg.differentiate(respect_to), Power(self.arg, Num(-1)))
+            else:
+                return Multiply(self.arg.differentiate(respect_to),
+                                Power(Multiply(self.arg, Log(Num('e'), self.base)), Num(-1))
+                                )
+        else:
+            # Then it is a constant!
+            return Num(0)
+
+    def simplify(self) -> Expr:
+        if self.base.n == 'e' and isinstance(self.arg, Num) and self.arg.n == 'e':
+            return Num(1)
+        return Log(self.base, self.arg.simplify())
+
+
+class LogZeroError(Exception):
+    """Raised when the user attempts to define log(0).
+
+    Instance Attributes:
+        - msg: the error message
+    """
+    msg: str
+
+    def __init__(self) -> None:
+        self.msg = 'You cannot define log(0). Please try again!'
+
+
+class TrigError(Exception):
+    """Raised when the user tries to define an undefined trigonometric function.
+
+    Instance Attributes:
+        - msg: the error message
+    """
+    msg: str
+
+    def __init__(self) -> None:
+        self.msg = 'The entered trigonometric function does not exist. Please try again!'
