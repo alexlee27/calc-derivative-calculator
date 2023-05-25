@@ -1,4 +1,4 @@
-"""The main class"""
+"""The runner file"""
 
 from classes import *
 
