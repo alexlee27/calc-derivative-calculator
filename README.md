@@ -1,8 +1,8 @@
 # Calculus Derivative Calculator
-A **calculus [derivative](https://en.wikipedia.org/wiki/Derivative) (differentiation) calculator** built with Python from *scratch* (without any math-related libraries like SymPy!) using [binary expression trees](https://en.wikipedia.org/wiki/Binary_expression_tree) and a lot of [recursion](https://en.wikipedia.org/wiki/Recursion_(computer_science)).
+This is a **calculus [derivative](https://en.wikipedia.org/wiki/Derivative) (differentiation) calculator** built with Python from *scratch* (without any math-related libraries like SymPy!) using [binary expression trees](https://en.wikipedia.org/wiki/Binary_expression_tree) and a lot of [recursion](https://en.wikipedia.org/wiki/Recursion_(computer_science)).
 
 ## :bulb: Motivation
-During my first year of studying Computer Science in university, one of the main topics that my courses covered was [recursion](https://en.wikipedia.org/wiki/Recursion_(computer_science)). The way recursion works reminded me of the [chain rule](https://en.wikipedia.org/wiki/Chain_rule) in calculus a lot, so I decided to take this idea and turn it into a project.
+After completing my first year of studying computer science at university, I wanted to use what I've learned to build a fun side project. Some of the main topics that my courses covered include [recursion](https://en.wikipedia.org/wiki/Recursion_(computer_science)) and [trees](https://en.wikipedia.org/wiki/Tree_(data_structure)). I thought these two tools would come in handy for building something like a derivative calculator: the way recursion works reminded me of the [chain rule](https://en.wikipedia.org/wiki/Chain_rule) in calculus a lot, and trees are often used for representing expressions (such as [abstract syntax trees](https://en.wikipedia.org/wiki/Abstract_syntax_tree) often used by compilers).
 
 ## 🎬 Demo
 
