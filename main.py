@@ -71,8 +71,8 @@ def string_to_expr(text: str, variables: set[str]) -> Expr:
                         subtree2 = output_stack.pop()
                         tree = str_to_bin_op(operator, subtree2, subtree1)
                         output_stack.append(tree)
-                # top of op stack is now '('
-                operator_stack.pop()  # Discarding the '('
+                # top of operator_stack is now '('
+                operator_stack.pop()  # discarding the '('
 
                 if len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'Func':
                     subtree = output_stack.pop()
