@@ -33,14 +33,16 @@ def tree_to_svg(G: pydot.Dot, tree: Expr, visited_names: set, identifier: int) -
         node = pydot.Node(name=root_name, label='+')
     elif isinstance(tree, Multiply):
         node = pydot.Node(name=root_name, label='*')
-    elif isinstance(tree, Num):
-        node = pydot.Node(name=root_name, label=str(tree.n))
+    elif isinstance(tree, Const):
+        node = pydot.Node(name=root_name, label=str(tree.name))
     elif isinstance(tree, Power):
         node = pydot.Node(name=root_name, label='^')
     elif isinstance(tree, Var):
-        node = pydot.Node(name=root_name, label=tree.var)
+        node = pydot.Node(name=root_name, label=tree.name)
     elif isinstance(tree, Trig):
         node = pydot.Node(name=root_name, label=tree.name)
+    elif isinstance(tree, Log):
+        node = pydot.Node(name=root_name, label='ln' if str(tree.base.name) == 'e' else 'log ' + str(tree.base.name))
     G.add_node(node)
 
     if isinstance(tree, Plus) or isinstance(tree, Multiply):
@@ -79,12 +81,20 @@ def tree_to_svg(G: pydot.Dot, tree: Expr, visited_names: set, identifier: int) -
         edge = pydot.Edge(root_name, str(new_identifier))
         G.add_edge(edge)
 
+    if isinstance(tree, Log):
+        # Recurse into the parameter
+        tree_to_svg(G, tree.arg, visited_names, new_identifier)
+        edge = pydot.Edge(root_name, str(new_identifier))
+        G.add_edge(edge)
+
 
 G = pydot.Dot(graph_type="digraph")
 G.size = "7.75,10.25"
 
 # Example tree below
-tree = Multiply(Trig('sin', Var('x')), Power(Trig('cos', Var('x')), Num(-1))).differentiate('x')
+# tree = Multiply(Trig('sin', Var('x')), Power(Trig('cos', Var('x')), Num(-1))).differentiate('x')
+
+tree = Plus(Log(Const(2), Var('x')), Log(Const('e'), Var('x')))
 
 tree_to_svg(G, tree, set(), 0)
 

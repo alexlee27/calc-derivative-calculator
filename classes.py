@@ -17,12 +17,12 @@ class Expr:
         return NotImplementedError
 
 
-class Plus(Expr):
-    """Represents the binary operation of adding two expressions.
+class BinOp(Expr):
+    """An abstract class representing a binary operation.
 
     Instance Attributes:
-        - left: the expression to the left of the plus sign
-        - right: the expression to the right of the plus sign
+        - left: the expression to the left of the operator
+        - right: the expression to the right of the operator
     """
     left: Expr
     right: Expr
@@ -30,6 +30,75 @@ class Plus(Expr):
     def __init__(self, left: Expr, right: Expr) -> None:
         self.left = left
         self.right = right
+
+    def __str__(self) -> Any:
+        return NotImplementedError
+
+    def differentiate(self, respect_to: str) -> Any:
+        """Differentiate the expression."""
+        return NotImplementedError
+
+    def simplify(self) -> Any:
+        """Simplify the expression."""
+        return NotImplementedError
+
+
+class Num(Expr):
+    """An abstract class representing a number (constant or variable).
+
+    Instance Attributes:
+        - num: the number the Num object represents.
+    """
+    num: Any
+
+    def __init__(self, num: Any) -> None:
+        self.num = num
+
+    def __str__(self) -> Any:
+        return NotImplementedError
+
+    def differentiate(self, respect_to: str) -> Any:
+        """Differentiate the expression."""
+        return NotImplementedError
+
+    def simplify(self) -> Any:
+        """Simplify the expression."""
+        return NotImplementedError
+
+
+class Func(Expr):
+    """An abstract class representing a mathematical function.
+
+    Instance Attributes:
+        - arg: the argument of the function
+    """
+    arg: Expr
+
+    def __init__(self, arg: Expr) -> None:
+        self.arg = arg
+
+    def __str__(self) -> Any:
+        return NotImplementedError
+
+    def differentiate(self, respect_to: str) -> Any:
+        """Differentiate the expression."""
+        return NotImplementedError
+
+    def simplify(self) -> Any:
+        """Simplify the expression."""
+        return NotImplementedError
+
+
+class Plus(BinOp):
+    """Represents the binary operation of adding two expressions.
+
+    Instance Attributes:
+        - left: the expression to the left of the plus sign
+        - right: the expression to the right of the plus sign
+    """
+
+    def __init__(self, left: Expr, right: Expr) -> None:
+        super().__init__(left, right)
 
     def __str__(self) -> str:
         return '(' + str(self.left) + ' + ' + str(self.right) + ')'
@@ -40,16 +109,16 @@ class Plus(Expr):
     def simplify(self) -> Expr:
         # self.left == self.right
         if str(self.left) == str(self.right):
-            return Multiply(Num(2), self.left.simplify()).simplify()
+            return Multiply(Const(2), self.left.simplify()).simplify()
         # self.left is Num(0)
-        if isinstance(self.left, Num) and self.left.n == 0:
+        if isinstance(self.left, Const) and self.left.name == 0:
             return self.right.simplify()
         # self.right is Num(0)
-        if isinstance(self.right, Num) and self.right.n == 0:
+        if isinstance(self.right, Const) and self.right.name == 0:
             return self.left.simplify()
         # Num + Num
-        if isinstance(self.left, Num) and isinstance(self.right, Num):
-            return Num(self.left.n + self.right.n)
+        if isinstance(self.left, Const) and isinstance(self.right, Const):
+            return Const(self.left.name + self.right.name)
 
         # Multiply + Multiply
         if isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
@@ -86,51 +155,48 @@ class Plus(Expr):
         return Plus(self.left.simplify(), self.right.simplify())
 
 
-class Multiply(Expr):
+class Multiply(BinOp):
     """Represents the binary operation of multiplying two expressions.
 
     Instance Attributes:
         - left: the expression to the left of the times sign
         - right: the expression to the right of the times sign
     """
-    left: Expr
-    right: Expr
 
     def __init__(self, left: Expr, right: Expr) -> None:
-        self.left = left
-        self.right = right
+        super().__init__(left, right)
 
     def __str__(self) -> str:
         return '(' + str(self.left) + ' * ' + str(self.right) + ')'
 
     def differentiate(self, respect_to: str) -> Expr:
-        if isinstance(self.left, Num) and not isinstance(self.right, Num):
+        if isinstance(self.left, Const) and not isinstance(self.right, Const):
             return Multiply(self.left, self.right.differentiate(respect_to))
 
-        if isinstance(self.right, Num) and not isinstance(self.left, Num):
+        if isinstance(self.right, Const) and not isinstance(self.left, Const):
             return Multiply(self.right, self.left.differentiate(respect_to))
 
         return Plus(Multiply(self.left.differentiate(respect_to), self.right),
                     Multiply(self.left, self.right.differentiate(respect_to)))
 
     def simplify(self) -> Expr:
-        if isinstance(self.left, Num):
-            if self.left.n == 1:
+        if isinstance(self.left, Const):
+            if self.left.name == 1:
                 return self.right.simplify()
-            elif self.left.n == 0:
-                return Num(0)
+            elif self.left.name == 0:
+                return Const(0)
 
-        if isinstance(self.right, Num):
-            if self.right.n == 1:
+        if isinstance(self.right, Const):
+            if self.right.name == 1:
                 return self.left.simplify()
-            elif self.right.n == 0:
-                return Num(0)
+            elif self.right.name == 0:
+                return Const(0)
 
         if str(self.left) == str(self.right):
-            return Power(self.left.simplify(), Num(2))
+            return Power(self.left.simplify(), Const(2))
 
-        if isinstance(self.left, Num) and isinstance(self.right, Num):
-            return Num(self.left.n * self.right.n)
+        if isinstance(self.left, Const) and isinstance(self.right, Const):
+            return Const(self.left.name * self.right.name)
 
         # Power * Power with same bases
         if isinstance(self.left, Power) and isinstance(self.right, Power) \
@@ -185,85 +251,81 @@ class Multiply(Expr):
         return Multiply(self.left.simplify(), self.right.simplify())
 
 
-class Num(Expr):
+class Const(Num):
     """Represents a constant number.
 
     Instance Attributes:
-        - n: the number self represents
+        - name: the number self represents
             - 'e' represents Euler's number
             - 'pi' represents π (the ratio of a circle's circumference to its diameter)
     """
-    n: int | float | str
+    name: int | float | str
 
-    def __init__(self, n: int | float | str) -> None:
-        self.n = n
+    def __init__(self, name: int | float | str) -> None:
+        super().__init__(name)
 
     def __str__(self) -> str:
-        return str(self.n)
+        return str(self.name)
 
     def differentiate(self, respect_to: str) -> Expr:
-        return Num(0)
+        return Const(0)
 
     def simplify(self) -> Expr:
         return self
 
 
-class Power(Expr):
-    """Represents a power.
+class Power(BinOp):
+    """Represents the binary operation of exponentiation (power).
 
     Instance Attributes:
-        - base: the base of the power
-        - exponent: the exponent of the power
+        - left: the base of the power
+        - right: the exponent of the power
     """
-    base: Expr
-    exponent: Expr
-
     def __init__(self, base: Expr, exponent: Expr) -> None:
         try:
-            if isinstance(base, Num) and base.n == 0 and isinstance(exponent, Num) and exponent.n < 0:
+            if isinstance(base, Const) and base.name == 0 and isinstance(exponent, Const) and exponent.name < 0:
                 raise ZeroDivisionError
-            self.base = base
-            self.exponent = exponent
+            super().__init__(base, exponent)
         except ZeroDivisionError:
             print('You may not divide by zero. Please try again!')
 
     def __str__(self) -> str:
-        return '(' + str(self.base) + ')^' + '(' + str(self.exponent) + ')'
+        return '(' + str(self.left) + ')^' + '(' + str(self.right) + ')'
 
     def differentiate(self, respect_to: str) -> Expr:
-        if isinstance(self.base, Num) and isinstance(self.exponent, Num):
-            return Num(0)
+        if isinstance(self.left, Const) and isinstance(self.right, Const):
+            return Const(0)
 
         # Power rule
-        if not isinstance(self.base, Num) and isinstance(self.exponent, Num) and isinstance(self.exponent.n, int):
-            return Multiply(Multiply(self.exponent,
-                                     Power(self.base, Num(self.exponent.n - 1))), self.base.differentiate(respect_to))
+        if not isinstance(self.left, Const) and isinstance(self.right, Const) and isinstance(self.right.name, int):
+            return Multiply(Multiply(self.right,
+                                     Power(self.left, Const(self.right.name - 1))), self.left.differentiate(respect_to))
 
         # e ^ f(x)
-        if isinstance(self.base, Num) and self.base.n == 'e':
-            return Multiply(self, self.exponent.differentiate(respect_to))
+        if isinstance(self.left, Const) and self.left.name == 'e':
+            return Multiply(self, self.right.differentiate(respect_to))
 
     def simplify(self) -> Expr:
-        return Power(self.base.simplify(), self.exponent.simplify())
+        return Power(self.left.simplify(), self.right.simplify())
 
 
-class Var(Expr):
+class Var(Num):
     """Represents a single variable.
 
     Instance Attributes:
-        - var: the name of the variable
+        - name: the name of the variable
     """
-    var: str
+    name: str
 
-    def __init__(self, var: str) -> None:
-        self.var = var
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
 
     def __str__(self) -> str:
-        return self.var
+        return self.name
 
     def differentiate(self, respect_to: str) -> Expr:
-        if respect_to == self.var:
-            return Num(1)
+        if respect_to == self.name:
+            return Const(1)
         else:
             return self
 
@@ -271,7 +333,7 @@ class Var(Expr):
         return self
 
 
-class Trig(Expr):
+class Trig(Func):
     """Represents a trigonometric function.
 
     Instance Attributes:
@@ -290,7 +352,7 @@ class Trig(Expr):
             if self.name not in self.VALID_NAMES:
                 raise TrigError
             self.name = name
-            self.arg = arg
+            super().__init__(arg)
         except TrigError as error:
             print(error.msg)
 
@@ -303,13 +365,13 @@ class Trig(Expr):
                             self.arg.differentiate(respect_to)
                             )
         if self.name == 'cos':
-            return Multiply(Num(-1),
+            return Multiply(Const(-1),
                             Multiply(Trig('sin', self.arg),
                                      self.arg.differentiate(respect_to)
                                      )
                             )
         if self.name == 'tan':
-            return Multiply(Power(Trig('sec', self.arg), Num(2)),
+            return Multiply(Power(Trig('sec', self.arg), Const(2)),
                             self.arg.differentiate(respect_to)
                             )
         if self.name == 'sec':
@@ -319,7 +381,7 @@ class Trig(Expr):
                                      )
                             )
         if self.name == 'csc':
-            return Multiply(Num(-1),
+            return Multiply(Const(-1),
                             Multiply(Trig('csc', Var('x')),
                                      Multiply(Trig('cot', Var('x')),
                                               self.arg.differentiate(respect_to)
@@ -327,31 +389,31 @@ class Trig(Expr):
                                      )
                             )
         if self.name == 'cot':
-            return Multiply(Num(-1),
-                            Multiply(Power(Trig('csc', self.arg), Num(2)),
+            return Multiply(Const(-1),
+                            Multiply(Power(Trig('csc', self.arg), Const(2)),
                                      self.arg.differentiate(respect_to)
                                      )
                             )
 
         if self.name == 'arcsin':
             return Multiply(self.arg.differentiate(respect_to),
-                            Power(Plus(Num(1),
-                                       Multiply(Num(-1),
+                            Power(Plus(Const(1),
+                                       Multiply(Const(-1),
                                                 Power(self.arg,
-                                                      Num(2)))), Num(-0.5))
+                                                      Const(2)))), Const(-0.5))
                             )
         if self.name == 'arccos':
-            return Multiply(Num(-1), Trig('arcsin', self.arg).differentiate(respect_to))
+            return Multiply(Const(-1), Trig('arcsin', self.arg).differentiate(respect_to))
         if self.name == 'arctan':
             return Multiply(self.arg.differentiate(respect_to),
-                            Power(Plus(Power(self.arg, Num(2)), Num(1)), Num(-1))
+                            Power(Plus(Power(self.arg, Const(2)), Const(1)), Const(-1))
                             )
 
     def simplify(self) -> Expr:
         return Trig(self.name, self.arg.simplify())
 
 
-class Log(Expr):
+class Log(Func):
     """Represents a logarithmic function.
 
     Instance Attributes:
@@ -361,36 +423,39 @@ class Log(Expr):
     Representation Invariants:
         - isinstance(self.base, Num)
     """
-    def __init__(self, base: Num, arg: Expr) -> None:
+    base: Const
+    arg: Expr
+
+    def __init__(self, base: Const, arg: Expr) -> None:
         try:
-            if isinstance(arg, Num) and arg.n == 0:
+            if isinstance(arg, Const) and arg.name == 0:
                 raise LogZeroError
             self.base = base
-            self.arg = arg
+            super().__init__(arg)
         except LogZeroError as error:
             print(error.msg)
 
     def __str__(self) -> str:
-        if self.base.n == 'e':
+        if self.base.name == 'e':
             return 'ln(' + str(self.arg) + ')'
         else:
             return 'log' + str(self.base) + '(' + str(self.arg) + ')'
 
     def differentiate(self, respect_to: str) -> Expr:
-        if not isinstance(self.arg, Num):
-            if self.base.n == 'e':
-                return Multiply(self.arg.differentiate(respect_to), Power(self.arg, Num(-1)))
+        if not isinstance(self.arg, Const):
+            if self.base.name == 'e':
+                return Multiply(self.arg.differentiate(respect_to), Power(self.arg, Const(-1)))
             else:
                 return Multiply(self.arg.differentiate(respect_to),
-                                Power(Multiply(self.arg, Log(Num('e'), self.base)), Num(-1))
+                                Power(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1))
                                 )
         else:
             # Then it is a constant!
-            return Num(0)
+            return Const(0)
 
     def simplify(self) -> Expr:
-        if self.base.n == 'e' and isinstance(self.arg, Num) and self.arg.n == 'e':
-            return Num(1)
+        if self.base.name == 'e' and isinstance(self.arg, Const) and self.arg.name == 'e':
+            return Const(1)
         return Log(self.base, self.arg.simplify())
 
 
