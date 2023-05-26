@@ -49,10 +49,10 @@ class Num(Expr):
     Instance Attributes:
         - num: the number the Num object represents.
     """
-    num: Any
+    name: Any
 
-    def __init__(self, num: Any) -> None:
-        self.num = num
+    def __init__(self, name: Any) -> None:
+        self.name = name
 
     def __str__(self) -> Any:
         return NotImplementedError
@@ -200,9 +200,9 @@ class Multiply(BinOp):
 
         # Power * Power with same bases
         if isinstance(self.left, Power) and isinstance(self.right, Power) \
-                and str(self.left.base) == str(self.right.base):
-            return Power(self.left.base.simplify(),
-                         Plus(self.left.exponent.simplify(), self.right.exponent.simplify()).simplify())
+                and str(self.left.left) == str(self.right.left):
+            return Power(self.left.left.simplify(),
+                         Plus(self.left.right.simplify(), self.right.right.simplify()).simplify())
 
         # <some_type> * (<some_type> * Expr)
         if isinstance(self.right, Multiply) and type(self.left) == type(self.right.left):
@@ -349,7 +349,7 @@ class Trig(Func):
 
     def __init__(self, name: str, arg: Expr) -> None:
         try:
-            if self.name not in self.VALID_NAMES:
+            if name not in self.VALID_NAMES:
                 raise TrigError
             self.name = name
             super().__init__(arg)

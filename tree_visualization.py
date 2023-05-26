@@ -2,6 +2,7 @@
 import pydot
 from IPython.display import Image, display
 from classes import *
+from main import *
 
 
 def tree_to_svg(G: pydot.Dot, tree: Expr, visited_names: set, identifier: int) -> None:
@@ -62,7 +63,7 @@ def tree_to_svg(G: pydot.Dot, tree: Expr, visited_names: set, identifier: int) -
 
     if isinstance(tree, Power):
         # Recurse into the base
-        tree_to_svg(G, tree.base, visited_names, new_identifier)
+        tree_to_svg(G, tree.left, visited_names, new_identifier)
         edge = pydot.Edge(root_name, str(new_identifier))
         G.add_edge(edge)
 
@@ -71,7 +72,7 @@ def tree_to_svg(G: pydot.Dot, tree: Expr, visited_names: set, identifier: int) -
             new_identifier += 1
 
         # Recurse into the exponent
-        tree_to_svg(G, tree.exponent, visited_names, new_identifier)
+        tree_to_svg(G, tree.right, visited_names, new_identifier)
         edge = pydot.Edge(root_name, str(new_identifier))
         G.add_edge(edge)
 
@@ -88,18 +89,19 @@ def tree_to_svg(G: pydot.Dot, tree: Expr, visited_names: set, identifier: int) -
         G.add_edge(edge)
 
 
-G = pydot.Dot(graph_type="digraph")
-G.size = "7.75,10.25"
+def runner(tree: Expr) -> None:
+    """The runner function.
+    """
+    G = pydot.Dot(graph_type="digraph")
+    G.size = "7.75,10.25"
 
-# Example tree below
-# tree = Multiply(Trig('sin', Var('x')), Power(Trig('cos', Var('x')), Num(-1))).differentiate('x')
+    # Example tree below
+    # tree = Multiply(Trig('sin', Var('x')), Power(Trig('cos', Var('x')), Num(-1))).differentiate('x')
 
-tree = Plus(Log(Const(2), Var('x')), Log(Const('e'), Var('x')))
+    tree_to_svg(G, tree, set(), 0)
 
-tree_to_svg(G, tree, set(), 0)
+    im = Image(G.create_svg())
 
-im = Image(G.create_svg())
+    display(im)
 
-display(im)
-
-G.write_svg('graph.svg')
+    G.write_svg('graph.svg')
