@@ -1,5 +1,5 @@
 # A Calculus Differentiation Calculator ... from Scratch!
-A calculus differentiation calculator from scratch using [binary expression trees](https://en.wikipedia.org/wiki/Binary_expression_tree) and a lot of recursion.
+A calculus differentiation calculator built with Python from *scratch* (without any math-related libraries like SymPy!) using [binary expression trees](https://en.wikipedia.org/wiki/Binary_expression_tree) and a lot of recursion.
 
 ## How it works
 ### Input
