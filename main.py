@@ -206,7 +206,6 @@ def str_to_func(token: str, arg: Expr, variables: set[str]) -> Func:
 def main() -> None:
     """The main function of this file.
     """
-    infix_expression = ''
     while True:
         infix_expression = input('\nEnter a math expression to differentiate (type \'stop\' to stop): ')
         if len(infix_expression) == 4 and infix_expression.lower() == 'stop':
@@ -215,8 +214,13 @@ def main() -> None:
         expr = string_to_expr(infix_expression, {variable})
         if expr is not None:
             differentiated = expr.differentiate(variable)
-            print(differentiated)
-            visualization_runner(differentiated)
+            prev = differentiated
+            simplified = prev.simplify()
+            while str(simplified) != str(prev):
+                print(prev)
+                prev, simplified = simplified, simplified.simplify()
+            print(simplified)
+            visualization_runner(simplified)
     print('Program is done')
 
 

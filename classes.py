@@ -305,6 +305,12 @@ class Power(BinOp):
         if isinstance(self.left, Const) and self.left.name == 'e':
             return Multiply(self, self.right.differentiate(respect_to))
 
+        # Const ^ f(x)
+        if isinstance(self.left, Const):
+            return Multiply(self, Multiply(Log(Const('e'), self.left), self.right.differentiate(respect_to)))
+
+        # Todo: implement power rule for non-integer exponents
+
     def simplify(self) -> Expr:
         return Power(self.left.simplify(), self.right.simplify())
 
@@ -327,7 +333,7 @@ class Var(Num):
         if respect_to == self.name:
             return Const(1)
         else:
-            return self
+            return self  # todo: implement prime
 
     def simplify(self) -> Expr:
         return self
