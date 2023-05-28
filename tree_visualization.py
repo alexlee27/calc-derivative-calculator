@@ -89,7 +89,7 @@ def tree_to_svg(G: pydot.Dot, tree: Expr, visited_names: set, identifier: int) -
         G.add_edge(edge)
 
 
-def runner(tree: Expr) -> None:
+def visualization_runner(tree: Expr) -> None:
     """The runner function.
     """
     G = pydot.Dot(graph_type="digraph")
