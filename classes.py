@@ -2,6 +2,8 @@
 from typing import *
 
 
+# todo: implement differentiation for other variables (prime)
+
 class Expr:
     """An abstract class representing a mathematial expression.
     """
@@ -195,7 +197,8 @@ class Multiply(BinOp):
         if str(self.left) == str(self.right):
             return Power(self.left.simplify(), Const(2))
 
-        if isinstance(self.left, Const) and isinstance(self.right, Const):
+        if isinstance(self.left, Const) and isinstance(self.right, Const) and not isinstance(self.left.name, str) \
+                and not isinstance(self.right.name, str):
             return Const(self.left.name * self.right.name)
 
         # Power * Power with same bases
@@ -320,20 +323,26 @@ class Var(Num):
 
     Instance Attributes:
         - name: the name of the variable
+        - prime: number of times the variable is differentiated with respect to the variable of differentiation
     """
     name: str
+    prime: int
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, prime: int = 0) -> None:
         super().__init__(name)
+        self.prime = prime
 
     def __str__(self) -> str:
-        return self.name
+        if self.prime == 0:
+            return self.name
+        else:
+            return self.name + '\'' * self.prime
 
     def differentiate(self, respect_to: str) -> Expr:
         if respect_to == self.name:
             return Const(1)
         else:
-            return self  # todo: implement prime
+            return Var(self.name, self.prime + 1)
 
     def simplify(self) -> Expr:
         return self
