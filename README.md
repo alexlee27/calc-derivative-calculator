@@ -1,5 +1,5 @@
 # Calculus Derivative Calculator
-This is a **calculus [derivative](https://en.wikipedia.org/wiki/Derivative) (differentiation) calculator** built with Python from *scratch* (without any math-related libraries like SymPy!) using [binary expression trees](https://en.wikipedia.org/wiki/Binary_expression_tree) and a lot of [recursion](https://en.wikipedia.org/wiki/Recursion_(computer_science)).
+This is a **calculus [derivative](https://en.wikipedia.org/wiki/Derivative) (differentiation) calculator** built with Python from *scratch* (without any math-related libraries like SymPy!) using [binary expression trees](https://en.wikipedia.org/wiki/Binary_expression_tree) and a lot of recursion.
 
 ## 🎬 Demo
 
