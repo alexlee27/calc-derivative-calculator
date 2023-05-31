@@ -2,8 +2,6 @@
 from typing import *
 
 
-# todo: implement differentiation for other variables (prime)
-
 class Expr:
     """An abstract class representing a mathematial expression.
     """
@@ -157,6 +155,68 @@ class Plus(BinOp):
         return Plus(self.left.simplify(), self.right.simplify())
 
 
+# class Minus(BinOp):
+#     """Represents the binary operation of subtracting one expression from another.
+#
+#     Instance Attributes:
+#         - left: the expression to the left of the minus sign
+#         - right: the expression to the right of the minus sign
+#
+#     Note: Many of the implementations of the methods follow directly from Plus's counterparts.
+#     When debugging, debug both Plus and Minus.
+#     """
+#
+#     def __init__(self, left: Expr, right: Expr) -> None:
+#         super().__init__(left, right)
+#
+#     def __str__(self) -> str:
+#         return '(' + str(self.left) + ' - ' + str(self.right) + ')'
+#
+#     def differentiate(self, respect_to: str) -> Expr:
+#         return Minus(self.left.differentiate(respect_to), self.right.differentiate(respect_to))
+#
+#     def simplify(self) -> Expr:
+#         # self.left == self.right
+#         if str(self.left) == str(self.right):
+#             return Const(0)
+#         # self.left is Num(0)
+#         if isinstance(self.left, Const) and self.left.name == 0:
+#             return self.right.simplify()
+#         # self.right is Num(0)
+#         if isinstance(self.right, Const) and self.right.name == 0:
+#             return self.left.simplify()
+#         # Num - Num
+#         if isinstance(self.left, Const) and isinstance(self.right, Const):
+#             return Const(self.left.name - self.right.name)
+#
+#         # Multiply - Multiply
+#         if isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
+#             #           -
+#             #          / \
+#             #         *   *
+#             #        /\   /\
+#             #       a  b c  d
+#             # Case 1: a and c are the same object
+#             if str(self.left.left) == str(self.right.left):
+#                 return Multiply(Minus(self.left.right.simplify(), self.right.right.simplify()).simplify(),
+#                                 self.left.left.simplify()).simplify()
+#             # Case 2: a and d are the same object
+#             if str(self.left.left) == str(self.right.right):
+#                 return Multiply(Minus(self.left.right.simplify(), self.right.left.simplify()).simplify(),
+#                                 self.left.left.simplify()).simplify()
+#             # Case 3: b and c are the same object
+#             if str(self.left.right) == str(self.right.left):
+#                 return Multiply(Minus(self.left.left.simplify(), self.right.right.simplify()).simplify(),
+#                                 self.left.right.simplify()).simplify()
+#             # Case 4: b and d are the same object
+#             if str(self.left.right) == str(self.right.right):
+#                 return Multiply(Minus(self.left.left.simplify(), self.right.left.simplify()).simplify(),
+#                                 self.left.right.simplify()).simplify()
+#
+#         return Minus(self.left.simplify(), self.right.simplify())
+#         # keep implementing todo
+
+
 class Multiply(BinOp):
     """Represents the binary operation of multiplying two expressions.
 
@@ -182,6 +242,8 @@ class Multiply(BinOp):
                     Multiply(self.left, self.right.differentiate(respect_to)))
 
     def simplify(self) -> Expr:
+
+
         if isinstance(self.left, Const):
             if self.left.name == 1:
                 return self.right.simplify()
@@ -300,7 +362,8 @@ class Power(BinOp):
             return Const(0)
 
         # Power rule
-        if not isinstance(self.left, Const) and isinstance(self.right, Const) and isinstance(self.right.name, int):
+        if not isinstance(self.left, Const) and isinstance(self.right, Const) \
+                and (isinstance(self.right.name, int) or (isinstance(self.right.name, float))):
             return Multiply(Multiply(self.right,
                                      Power(self.left, Const(self.right.name - 1))), self.left.differentiate(respect_to))
 
@@ -312,8 +375,6 @@ class Power(BinOp):
         if isinstance(self.left, Const):
             return Multiply(self, Multiply(Log(Const('e'), self.left), self.right.differentiate(respect_to)))
 
-        # Todo: implement power rule for non-integer exponents
-
     def simplify(self) -> Expr:
         return Power(self.left.simplify(), self.right.simplify())
 
@@ -323,26 +384,20 @@ class Var(Num):
 
     Instance Attributes:
         - name: the name of the variable
-        - prime: number of times the variable is differentiated with respect to the variable of differentiation
     """
     name: str
-    prime: int
 
-    def __init__(self, name: str, prime: int = 0) -> None:
+    def __init__(self, name: str) -> None:
         super().__init__(name)
-        self.prime = prime
 
     def __str__(self) -> str:
-        if self.prime == 0:
-            return self.name
-        else:
-            return self.name + '\'' * self.prime
+        return self.name
 
     def differentiate(self, respect_to: str) -> Expr:
         if respect_to == self.name:
             return Const(1)
         else:
-            return Var(self.name, self.prime + 1)
+            return Const(0)
 
     def simplify(self) -> Expr:
         return self

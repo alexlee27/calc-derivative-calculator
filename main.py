@@ -23,7 +23,7 @@ class LogBaseVarError(Exception):
 
 
 def string_to_expr(text: str, variables: set[str]) -> Optional[Expr]:
-    """Converts a string math input to an Expr binary tree.
+    """A parser function that converts a string math input to an Expr binary tree.
     Returns None if there is an error.
 
     Involves the Shunting yard algorithm (https://en.wikipedia.org/wiki/Shunting_yard_algorithm).
