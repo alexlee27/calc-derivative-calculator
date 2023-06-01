@@ -16,6 +16,10 @@ class Expr:
         """Simplify the expression."""
         return NotImplementedError
 
+    def rearrange(self) -> Any:
+        """Rearrange the expression."""
+        return NotImplementedError
+
 
 class BinOp(Expr):
     """An abstract class representing a binary operation.
@@ -31,17 +35,6 @@ class BinOp(Expr):
         self.left = left
         self.right = right
 
-    def __str__(self) -> Any:
-        return NotImplementedError
-
-    def differentiate(self, respect_to: str) -> Any:
-        """Differentiate the expression."""
-        return NotImplementedError
-
-    def simplify(self) -> Any:
-        """Simplify the expression."""
-        return NotImplementedError
-
 
 class Num(Expr):
     """An abstract class representing a number (constant or variable).
@@ -54,16 +47,8 @@ class Num(Expr):
     def __init__(self, name: Any) -> None:
         self.name = name
 
-    def __str__(self) -> Any:
-        return NotImplementedError
-
-    def differentiate(self, respect_to: str) -> Any:
-        """Differentiate the expression."""
-        return NotImplementedError
-
-    def simplify(self) -> Any:
-        """Simplify the expression."""
-        return NotImplementedError
+    def __str__(self) -> str:
+        return str(self.name)
 
 
 class Func(Expr):
@@ -76,17 +61,6 @@ class Func(Expr):
 
     def __init__(self, arg: Expr) -> None:
         self.arg = arg
-
-    def __str__(self) -> Any:
-        return NotImplementedError
-
-    def differentiate(self, respect_to: str) -> Any:
-        """Differentiate the expression."""
-        return NotImplementedError
-
-    def simplify(self) -> Any:
-        """Simplify the expression."""
-        return NotImplementedError
 
 
 class Plus(BinOp):
@@ -130,91 +104,49 @@ class Plus(BinOp):
             # Case 1: a and c are the same object
             if str(self.left.left) == str(self.right.left):
                 return Multiply(Plus(self.left.right.simplify(), self.right.right.simplify()).simplify(),
-                                self.left.left.simplify()).simplify()
+                                self.left.left.simplify())  # .simplify()
             # Case 2: a and d are the same object
             if str(self.left.left) == str(self.right.right):
                 return Multiply(Plus(self.left.right.simplify(), self.right.left.simplify()).simplify(),
-                                self.left.left.simplify()).simplify()
+                                self.left.left.simplify())  # .simplify()
             # Case 3: b and c are the same object
             if str(self.left.right) == str(self.right.left):
                 return Multiply(Plus(self.left.left.simplify(), self.right.right.simplify()).simplify(),
-                                self.left.right.simplify()).simplify()
+                                self.left.right.simplify())  # .simplify()
             # Case 4: b and d are the same object
             if str(self.left.right) == str(self.right.right):
                 return Multiply(Plus(self.left.left.simplify(), self.right.left.simplify()).simplify(),
-                                self.left.right.simplify()).simplify()
+                                self.left.right.simplify())  # .simplify()
 
         # # Multiply + Expr or Expr + Multiply
         # if isinstance(self.left, Multiply) or isinstance(self.right, Multiply):
         #     result = Plus(self.left.simplify(), self.right.simplify()).simplify()
-        #
-        # # Plus + Plus or Plus + Expr or Expr + Plus
-        # if isinstance(self.left, Plus) or isinstance(self.right, Plus):
-        #     return Plus(self.left.simplify(), self.right.simplify()).simplify()
+
+        # Plus + Plus or Plus + Expr or Expr + Plus
+        if isinstance(self.left, Plus) or isinstance(self.right, Plus):
+            return Plus(self.left.simplify(), self.right.simplify())  # .simplify()
 
         return Plus(self.left.simplify(), self.right.simplify())
 
-
-# class Minus(BinOp):
-#     """Represents the binary operation of subtracting one expression from another.
+#     def rearrange(self) -> Expr:
+#         """Rearrange the Plus expression."""
 #
-#     Instance Attributes:
-#         - left: the expression to the left of the minus sign
-#         - right: the expression to the right of the minus sign
+#         # Step 1: Insert all the non-Plus Expr objects into a list
+#         lst = expr_to_list(self)
+#         # assert(len(lst) >= 2)
 #
-#     Note: Many of the implementations of the methods follow directly from Plus's counterparts.
-#     When debugging, debug both Plus and Minus.
-#     """
+#         # Step 2: Sort the list
+#         lst.sort(key=rearrange_order)
 #
-#     def __init__(self, left: Expr, right: Expr) -> None:
-#         super().__init__(left, right)
+#         # Step 3: Insert all the objects into a new Plus binary tree
+#         tree = Plus(lst[0], lst[1])
+#         for i in range(2, len(lst)):
+#             tree = Plus(tree, lst[i])
 #
-#     def __str__(self) -> str:
-#         return '(' + str(self.left) + ' - ' + str(self.right) + ')'
+#         return tree
 #
-#     def differentiate(self, respect_to: str) -> Expr:
-#         return Minus(self.left.differentiate(respect_to), self.right.differentiate(respect_to))
-#
-#     def simplify(self) -> Expr:
-#         # self.left == self.right
-#         if str(self.left) == str(self.right):
-#             return Const(0)
-#         # self.left is Num(0)
-#         if isinstance(self.left, Const) and self.left.name == 0:
-#             return self.right.simplify()
-#         # self.right is Num(0)
-#         if isinstance(self.right, Const) and self.right.name == 0:
-#             return self.left.simplify()
-#         # Num - Num
-#         if isinstance(self.left, Const) and isinstance(self.right, Const):
-#             return Const(self.left.name - self.right.name)
-#
-#         # Multiply - Multiply
-#         if isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
-#             #           -
-#             #          / \
-#             #         *   *
-#             #        /\   /\
-#             #       a  b c  d
-#             # Case 1: a and c are the same object
-#             if str(self.left.left) == str(self.right.left):
-#                 return Multiply(Minus(self.left.right.simplify(), self.right.right.simplify()).simplify(),
-#                                 self.left.left.simplify()).simplify()
-#             # Case 2: a and d are the same object
-#             if str(self.left.left) == str(self.right.right):
-#                 return Multiply(Minus(self.left.right.simplify(), self.right.left.simplify()).simplify(),
-#                                 self.left.left.simplify()).simplify()
-#             # Case 3: b and c are the same object
-#             if str(self.left.right) == str(self.right.left):
-#                 return Multiply(Minus(self.left.left.simplify(), self.right.right.simplify()).simplify(),
-#                                 self.left.right.simplify()).simplify()
-#             # Case 4: b and d are the same object
-#             if str(self.left.right) == str(self.right.right):
-#                 return Multiply(Minus(self.left.left.simplify(), self.right.left.simplify()).simplify(),
-#                                 self.left.right.simplify()).simplify()
-#
-#         return Minus(self.left.simplify(), self.right.simplify())
-#         # keep implementing todo
+# def expr_to_list(obj: Expr) -> list:
+#     """"""
 
 
 class Multiply(BinOp):
@@ -242,8 +174,6 @@ class Multiply(BinOp):
                     Multiply(self.left, self.right.differentiate(respect_to)))
 
     def simplify(self) -> Expr:
-
-
         if isinstance(self.left, Const):
             if self.left.name == 1:
                 return self.right.simplify()
@@ -272,22 +202,22 @@ class Multiply(BinOp):
         # <some_type> * (<some_type> * Expr)
         if isinstance(self.right, Multiply) and type(self.left) == type(self.right.left):
             return Multiply(Multiply(self.left.simplify(),
-                                     self.right.left.simplify()).simplify(), self.right.right.simplify()).simplify()
+                                     self.right.left.simplify()).simplify(), self.right.right.simplify())  # .simplify()
 
         # <some_type> * (Expr * <some_type>)
         if isinstance(self.right, Multiply) and type(self.left) == type(self.right.right):
             return Multiply(Multiply(self.left.simplify(),
-                                     self.right.right.simplify()).simplify(), self.right.left.simplify()).simplify()
+                                     self.right.right.simplify()).simplify(), self.right.left.simplify())  # .simplify()
 
         # (<some_type> * Expr) * <some_type>
         if isinstance(self.left, Multiply) and type(self.right) == type(self.left.left):
             return Multiply(Multiply(self.right.simplify(), self.left.left.simplify()).simplify(),
-                            self.left.right.simplify()).simplify()
+                            self.left.right.simplify())  # .simplify()
 
         # (Expr * <some_type>) * <some_type>
         if isinstance(self.left, Multiply) and type(self.right) == type(self.left.right):
             return Multiply(Multiply(self.right.simplify(), self.left.right.simplify()).simplify(),
-                            self.left.left.simplify()).simplify()
+                            self.left.left.simplify())  # .simplify()
 
         # Multiply * Multiply
         if isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
@@ -299,19 +229,19 @@ class Multiply(BinOp):
             # Case 1: a and c are the same type
             if type(self.left.left) == type(self.right.left):
                 return Multiply(Multiply(self.left.left.simplify(), self.right.left.simplify()).simplify(),
-                                Multiply(self.left.right.simplify(), self.right.right.simplify()).simplify()).simplify()
+                                Multiply(self.left.right.simplify(), self.right.right.simplify()).simplify())  # .simplify()
             # Case 2: a and d are the same type
             if type(self.left.left) == type(self.right.right):
                 return Multiply(Multiply(self.left.left.simplify(), self.right.right.simplify()).simplify(),
-                                Multiply(self.left.right.simplify(), self.right.left.simplify()).simplify()).simplify()
+                                Multiply(self.left.right.simplify(), self.right.left.simplify()).simplify())  # .simplify()
             # Case 3: b and c are the same type
             if type(self.left.right) == type(self.right.left):
                 return Multiply(Multiply(self.left.right.simplify(), self.right.left.simplify()).simplify(),
-                                Multiply(self.left.left.simplify(), self.right.right.simplify()).simplify()).simplify()
+                                Multiply(self.left.left.simplify(), self.right.right.simplify()).simplify())  # .simplify()
             # Case 4: b and d are the same type
             if type(self.left.right) == type(self.right.right):
                 return Multiply(Multiply(self.left.right.simplify(), self.right.right.simplify()).simplify(),
-                                Multiply(self.left.left.simplify(), self.right.left.simplify()).simplify()).simplify()
+                                Multiply(self.left.left.simplify(), self.right.left.simplify()).simplify())  # .simplify()
 
         return Multiply(self.left.simplify(), self.right.simplify())
 
@@ -328,9 +258,6 @@ class Const(Num):
 
     def __init__(self, name: int | float | str) -> None:
         super().__init__(name)
-
-    def __str__(self) -> str:
-        return str(self.name)
 
     def differentiate(self, respect_to: str) -> Expr:
         return Const(0)
@@ -389,9 +316,6 @@ class Var(Num):
 
     def __init__(self, name: str) -> None:
         super().__init__(name)
-
-    def __str__(self) -> str:
-        return self.name
 
     def differentiate(self, respect_to: str) -> Expr:
         if respect_to == self.name:
