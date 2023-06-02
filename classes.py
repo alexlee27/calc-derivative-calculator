@@ -20,6 +20,34 @@ class Expr:
         """Rearrange the expression."""
         return NotImplementedError
 
+    def __lt__(self, other) -> bool:
+        """Return whether self is less than other."""
+        type_to_priority = {'Power': 6, 'Exponential': 5, 'Function': 4, 'Other': 3, 'Non-digit': 2, 'Digit': 1}
+        self_type = get_arrangement_type(self)
+        other_type = get_arrangement_type(other)
+        if type_to_priority[self_type] < type_to_priority[other_type]:
+            return True
+        elif type_to_priority[self_type] > type_to_priority[other_type]:
+            return False
+        else:
+            if self_type == 'Power':
+                if get_exponent(self) < get_exponent(other):
+                    return True
+                elif get_exponent(self) > get_exponent(other):
+                    return False
+                # At this point, get_exponent(self) == get_exponent(other)
+                elif get_coefficient(self) < get_coefficient(other):
+                    return True
+                elif get_coefficient(self) > get_coefficient(other):
+                    return False
+                # At this point, get_coefficient(self) == get_coefficient(other)
+                else:
+                    return False
+            if self_type == 'Exponential':
+                # todo: continue
+
+
+
 
 class BinOp(Expr):
     """An abstract class representing a binary operation.
@@ -123,30 +151,30 @@ class Plus(BinOp):
         #     result = Plus(self.left.simplify(), self.right.simplify()).simplify()
 
         # Plus + Plus or Plus + Expr or Expr + Plus
-        if isinstance(self.left, Plus) or isinstance(self.right, Plus):
-            return Plus(self.left.simplify(), self.right.simplify())  # .simplify()
+        # if isinstance(self.left, Plus) or isinstance(self.right, Plus):
+        #     return Plus(self.left.simplify(), self.right.simplify()).simplify()
 
         return Plus(self.left.simplify(), self.right.simplify())
 
-#     def rearrange(self) -> Expr:
-#         """Rearrange the Plus expression."""
-#
-#         # Step 1: Insert all the non-Plus Expr objects into a list
-#         lst = expr_to_list(self)
-#         # assert(len(lst) >= 2)
-#
-#         # Step 2: Sort the list
-#         lst.sort(key=rearrange_order)
-#
-#         # Step 3: Insert all the objects into a new Plus binary tree
-#         tree = Plus(lst[0], lst[1])
-#         for i in range(2, len(lst)):
-#             tree = Plus(tree, lst[i])
-#
-#         return tree
-#
-# def expr_to_list(obj: Expr) -> list:
-#     """"""
+    def rearrange(self) -> Expr:
+        """Rearrange the Plus expression."""
+
+        # Step 1: Insert all the non-Plus Expr objects into a list
+        lst = expr_to_list(self)
+        # assert(len(lst) >= 2)
+
+        # Step 2: Sort the list
+        lst.sort()
+
+        # Step 3: Insert all the objects into a new Plus binary tree
+        tree = Plus(lst[0], lst[1])
+        for i in range(2, len(lst)):
+            tree = Plus(tree, lst[i])
+
+        return tree
+
+def expr_to_list(obj: Expr) -> list:
+    """"""
 
 
 class Multiply(BinOp):
