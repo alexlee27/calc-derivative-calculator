@@ -23,30 +23,66 @@ class Expr:
     def __lt__(self, other) -> bool:
         """Return whether self is less than other."""
         type_to_priority = {'Power': 6, 'Exponential': 5, 'Function': 4, 'Other': 3, 'Non-digit': 2, 'Digit': 1}
-        self_type = get_arrangement_type(self)
-        other_type = get_arrangement_type(other)
+        self_type, self_base, self_exponent, self_coefficient, self_function_name = get_arrangement_type(self)
+        other_type, other_base, other_exponent, other_coefficient, other_function_name = get_arrangement_type(other)
         if type_to_priority[self_type] < type_to_priority[other_type]:
             return True
         elif type_to_priority[self_type] > type_to_priority[other_type]:
             return False
         else:
             if self_type == 'Power':
-                if get_exponent(self) < get_exponent(other):
+                if self_exponent < other_exponent:
                     return True
-                elif get_exponent(self) > get_exponent(other):
+                elif self_exponent > other_exponent:
                     return False
-                # At this point, get_exponent(self) == get_exponent(other)
-                elif get_coefficient(self) < get_coefficient(other):
+                # At this point, self_exponent == other_exponent
+                elif self_coefficient < other_coefficient:
                     return True
-                elif get_coefficient(self) > get_coefficient(other):
+                elif self_coefficient > other_coefficient:
                     return False
-                # At this point, get_coefficient(self) == get_coefficient(other)
-                else:
+                # At this point, self_coefficient == other_coefficient:
+            elif self_type == 'Exponential':
+                if self_base < other_base:
+                    return True
+                elif self_base > other_base:
                     return False
-            if self_type == 'Exponential':
-                # todo: continue
+                # At this point, self_base == other_base:
+                elif self_exponent < other_exponent:
+                    return True
+                elif self_exponent > other_exponent:
+                    return False
+                # At this point, self_exponent == other_exponent
+                elif self_coefficient < other_coefficient:
+                    return True
+                elif self_coefficient > other_coefficient:
+                    return False
+                # At this point, self_coefficient == other_coefficient:
+            elif self_type == 'Function':
+                if self_function_name < other_function_name:
+                    return True
+                elif self_function_name > other_function_name:
+                    return False
+                # At this point, self_function_name == other_function_name:
+                elif self_exponent < other_exponent:
+                    return True
+                elif self_exponent > other_exponent:
+                    return False
+                # At this point, self_exponent == other_exponent
+                elif self_coefficient < other_coefficient:
+                    return True
+                elif self_coefficient > other_coefficient:
+                    return False
+                # At this point, self_coefficient == other_coefficient:
+            elif self_type == 'Non-digit':
+                self_list = process_to_list(self_base)
+                other_list = process_to_list(other_base)
 
+                # todo: loop through the lists
 
+            elif self_type == 'Digit':
+                if isinstance(self_base, Const) and isinstance(other_base, Const):
+                    return self_base.name < other_base.name
+            return False
 
 
 class BinOp(Expr):
