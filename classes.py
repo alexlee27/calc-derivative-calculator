@@ -5,6 +5,7 @@ from typing import *
 class Expr:
     """An abstract class representing a mathematial expression.
     """
+
     def __str__(self) -> Any:
         return NotImplementedError
 
@@ -85,6 +86,61 @@ class Expr:
             return False
 
 
+def get_arrangement_type(expr: Expr) -> tuple:
+    """Returns a tuple in the form of:
+    (type, base, exponent, coefficient, function_name)
+    """
+    if isinstance(expr, Var):
+        return ('Power', expr, Const(1), Const(1), None)  # 4
+    if isinstance(expr, Func):
+        return ('Function', expr, Const(1), Const(1), expr.name)  # 10
+    if isinstance(expr, Const) and isinstance(expr.name, str):
+        return ('Non-digit', expr, Const(1), Const(1), None)  # 13
+    if isinstance(expr, Const) and (isinstance(expr.name, int) or isinstance(expr.name, float)):
+        return ('Digit', expr, Const(1), Const(1), None)  # 18
+    if isinstance(expr, Multiply):
+        expr_left_type = get_arrangement_type(expr.left)[0]
+        if expr_left_type == 'Non-digit':
+            if get_arrangement_type(expr.right)[0] == 'Non-digit':
+                return ('Non-digit', expr, Const(1), Const(1), None)  # 15
+        if expr_left_type == 'Digit':
+            if get_arrangement_type(expr.right)[0] == 'Non-digit':
+                return ('Non-digit', expr.right, Const(1), expr.left, None)  # 14
+        if expr_left_type in {'Non-digit', 'Digit'}:
+            if isinstance(expr.right, Power) and isinstance(expr.right.left, Var) \
+                    and get_arrangement_type(expr.right.right)[0] in {'Non-digit', 'Digit'}:
+                return ('Power', expr.right.left, expr.right.right, expr.left, None)  # 1
+            if isinstance(expr.right, Var):
+                return ('Power', expr.right, Const(1), expr.left, None)  # 3
+            if isinstance(expr.right, Power) and get_arrangement_type(expr.right.left)[0] in {'Non-digit', 'Digit'} \
+                    and get_arrangement_type(expr.right.right)[0] == 'Power':
+                return ('Exponential', expr.right.left, expr.right.right, expr.left, None)  # 5, 8
+            if isinstance(expr.right, Func):
+                return ('Function', expr, Const(1), expr.left, expr.right.name)  # 9
+            if isinstance(expr.right, Power) and isinstance(expr.right.left, Func) \
+                    and get_arrangement_type(expr.right.right)[0] in {'Non-digit', 'Digit'}:
+                return ('Function', expr.right.left, expr.right.right, expr.left, expr.right.left.name)  # 11
+    if isinstance(expr, Power):
+        expr_left_type = get_arrangement_type(expr.left)[0]
+        if expr_left_type == 'Non-digit':
+            expr_right_type = get_arrangement_type(expr.right)[0]
+            if expr_right_type == 'Non-digit' or expr_right_type == 'Digit':
+                return ('Non-digit', expr.left, expr.right, Const(1), None)  # 16, 17
+        if expr_left_type == 'Digit':
+            if get_arrangement_type(expr.right)[0] == 'Non-digit':
+                return ('Digit', expr.left, expr.right, Const(1), None)  # 19
+        if expr_left_type in {'Non-digit', 'Digit'}:
+            if get_arrangement_type(expr.right)[0] == 'Power':
+                return ('Exponential', expr.left, expr.right, Const(1), None)  # 6, 7
+        if get_arrangement_type(expr.right)[0] in {'Non-digit', 'Digit'}:
+            if isinstance(expr.left, Var):
+                return ('Power', expr.left, expr.right, Const(1), None)  # 2
+            if isinstance(expr.left, Func):
+                return ('Function', expr.left, expr.right, Const(1), expr.left.name)  # 12
+
+    return ('Other', expr, Const(1), Const(1), None)
+
+
 class BinOp(Expr):
     """An abstract class representing a binary operation.
 
@@ -119,8 +175,10 @@ class Func(Expr):
     """An abstract class representing a mathematical function.
 
     Instance Attributes:
+        - name: the name of the function
         - arg: the argument of the function
     """
+    name: str
     arg: Expr
 
     def __init__(self, arg: Expr) -> None:
@@ -209,6 +267,7 @@ class Plus(BinOp):
 
         return tree
 
+
 def expr_to_list(obj: Expr) -> list:
     """"""
 
@@ -293,19 +352,23 @@ class Multiply(BinOp):
             # Case 1: a and c are the same type
             if type(self.left.left) == type(self.right.left):
                 return Multiply(Multiply(self.left.left.simplify(), self.right.left.simplify()).simplify(),
-                                Multiply(self.left.right.simplify(), self.right.right.simplify()).simplify())  # .simplify()
+                                Multiply(self.left.right.simplify(),
+                                         self.right.right.simplify()).simplify())  # .simplify()
             # Case 2: a and d are the same type
             if type(self.left.left) == type(self.right.right):
                 return Multiply(Multiply(self.left.left.simplify(), self.right.right.simplify()).simplify(),
-                                Multiply(self.left.right.simplify(), self.right.left.simplify()).simplify())  # .simplify()
+                                Multiply(self.left.right.simplify(),
+                                         self.right.left.simplify()).simplify())  # .simplify()
             # Case 3: b and c are the same type
             if type(self.left.right) == type(self.right.left):
                 return Multiply(Multiply(self.left.right.simplify(), self.right.left.simplify()).simplify(),
-                                Multiply(self.left.left.simplify(), self.right.right.simplify()).simplify())  # .simplify()
+                                Multiply(self.left.left.simplify(),
+                                         self.right.right.simplify()).simplify())  # .simplify()
             # Case 4: b and d are the same type
             if type(self.left.right) == type(self.right.right):
                 return Multiply(Multiply(self.left.right.simplify(), self.right.right.simplify()).simplify(),
-                                Multiply(self.left.left.simplify(), self.right.left.simplify()).simplify())  # .simplify()
+                                Multiply(self.left.left.simplify(),
+                                         self.right.left.simplify()).simplify())  # .simplify()
 
         return Multiply(self.left.simplify(), self.right.simplify())
 
@@ -337,6 +400,7 @@ class Power(BinOp):
         - left: the base of the power
         - right: the exponent of the power
     """
+
     def __init__(self, base: Expr, exponent: Expr) -> None:
         try:
             if isinstance(base, Const) and base.name == 0 and isinstance(exponent, Const) and exponent.name < 0:
@@ -475,12 +539,14 @@ class Log(Func):
     """Represents a logarithmic function.
 
     Instance Attributes:
+        - name: 'log'
         - base: the base of the logarithm
         - arg: the argument of the logarithm
 
     Representation Invariants:
         - isinstance(self.base, Num)
     """
+    name = 'log'
     base: Const
     arg: Expr
 
