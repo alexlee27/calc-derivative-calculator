@@ -75,8 +75,9 @@ class Expr:
                     return False
                 # At this point, self_coefficient == other_coefficient:
             elif self_type == 'Non-digit':
-                self_list = process_to_list(self_base)
-                other_list = process_to_list(other_base)
+                pass
+                # self_list = process_to_list(self_base)
+                # other_list = process_to_list(other_base)
 
                 # todo: loop through the lists
 
@@ -86,7 +87,7 @@ class Expr:
             return False
 
 
-def get_arrangement_type(expr: Expr) -> tuple:
+def get_arrangement_type(expr: Expr) -> tuple:  # TODO: TEST
     """Returns a tuple in the form of:
     (type, base, exponent, coefficient, function_name)
     """
@@ -254,7 +255,7 @@ class Plus(BinOp):
         """Rearrange the Plus expression."""
 
         # Step 1: Insert all the non-Plus Expr objects into a list
-        lst = expr_to_list(self)
+        lst = expr_to_list(self, self)
         # assert(len(lst) >= 2)
 
         # Step 2: Sort the list
@@ -268,8 +269,13 @@ class Plus(BinOp):
         return tree
 
 
-def expr_to_list(obj: Expr) -> list:
-    """"""
+def expr_to_list(obj: Expr, root: BinOp) -> list:
+    """Takes all descendants of obj that are not the same type as root, and puts them into a list.
+    """
+    if not isinstance(obj, type(root)):
+        return [obj]
+    else:
+        return expr_to_list(obj.left, root) + expr_to_list(obj.right, root)
 
 
 class Multiply(BinOp):
