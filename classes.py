@@ -22,7 +22,7 @@ class Expr:
         return NotImplementedError
 
     def __lt__(self, other) -> bool:
-        """Return whether self is less than other."""
+        """Return whether self is less (lower priority) than other."""
         type_to_priority = {'Power': 6, 'Exponential': 5, 'Function': 4, 'Other': 3, 'Non-digit': 2, 'Digit': 1}
         self_type, self_base, self_exponent, self_coefficient, self_function_name = get_arrangement_type(self)
         other_type, other_base, other_exponent, other_coefficient, other_function_name = get_arrangement_type(other)
@@ -75,71 +75,38 @@ class Expr:
                     return False
                 # At this point, self_coefficient == other_coefficient:
             elif self_type == 'Non-digit':
-                pass
-                # self_list = process_to_list(self_base)
-                # other_list = process_to_list(other_base)
+                print('inside __lt__')
+                self_list = process_to_list(self_base)
+                other_list = process_to_list(other_base)
+                print(str(self_base))
+                print(str(other_base))
+                print(self_list)
+                print(other_list)
 
-                # todo: loop through the lists
-
+                i = 0
+                while i < len(self_list) and i < len(other_list):  # todo: debug
+                    if self_list[i][0] > other_list[i][0]:  # Note that 'b' > 'a' evaluates to True
+                        print('2nd one has higher priority')
+                        return True
+                    elif self_list[i][0] == other_list[i][0]:  # Bases are the same; look at exponents
+                        if (isinstance(self_list[i][1], int) or isinstance(self_list[i][1], float)) and \
+                                (isinstance(other_list[i][1], int) or isinstance(other_list[i][1], float)):
+                            if self_list[i][1] < other_list[i][1]:  # Note that 2 < 3 evaluates to True
+                                print('2nd one has higher priority')
+                                return True
+                        if isinstance(self_list[i][1], str) and isinstance(other_list[i][1], str):
+                            if self_list[i][1] > other_list[i][1]:  # Note that 'b' > 'a' evaluates to True
+                                print('2nd one has higher priority')
+                                return True
+                        if not isinstance(self_list[i][1], str) and isinstance(other_list[i][1], str):
+                            # Alphabets take precedence over digits
+                            print('2nd one has higher priority')
+                            return True
+                    i += 1
             elif self_type == 'Digit':
                 if isinstance(self_base, Const) and isinstance(other_base, Const):
                     return self_base.name < other_base.name
             return False
-
-
-def get_arrangement_type(expr: Expr) -> tuple:  # TODO: TEST
-    """Returns a tuple in the form of:
-    (type, base, exponent, coefficient, function_name)
-    """
-    if isinstance(expr, Var):
-        return ('Power', expr, Const(1), Const(1), None)  # 4
-    if isinstance(expr, Func):
-        return ('Function', expr, Const(1), Const(1), expr.name)  # 10
-    if isinstance(expr, Const) and isinstance(expr.name, str):
-        return ('Non-digit', expr, Const(1), Const(1), None)  # 13
-    if isinstance(expr, Const) and (isinstance(expr.name, int) or isinstance(expr.name, float)):
-        return ('Digit', expr, Const(1), Const(1), None)  # 18
-    if isinstance(expr, Multiply):
-        expr_left_type = get_arrangement_type(expr.left)[0]
-        if expr_left_type == 'Non-digit':
-            if get_arrangement_type(expr.right)[0] == 'Non-digit':
-                return ('Non-digit', expr, Const(1), Const(1), None)  # 15
-        if expr_left_type == 'Digit':
-            if get_arrangement_type(expr.right)[0] == 'Non-digit':
-                return ('Non-digit', expr.right, Const(1), expr.left, None)  # 14
-        if expr_left_type in {'Non-digit', 'Digit'}:
-            if isinstance(expr.right, Power) and isinstance(expr.right.left, Var) \
-                    and get_arrangement_type(expr.right.right)[0] in {'Non-digit', 'Digit'}:
-                return ('Power', expr.right.left, expr.right.right, expr.left, None)  # 1
-            if isinstance(expr.right, Var):
-                return ('Power', expr.right, Const(1), expr.left, None)  # 3
-            if isinstance(expr.right, Power) and get_arrangement_type(expr.right.left)[0] in {'Non-digit', 'Digit'} \
-                    and get_arrangement_type(expr.right.right)[0] == 'Power':
-                return ('Exponential', expr.right.left, expr.right.right, expr.left, None)  # 5, 8
-            if isinstance(expr.right, Func):
-                return ('Function', expr, Const(1), expr.left, expr.right.name)  # 9
-            if isinstance(expr.right, Power) and isinstance(expr.right.left, Func) \
-                    and get_arrangement_type(expr.right.right)[0] in {'Non-digit', 'Digit'}:
-                return ('Function', expr.right.left, expr.right.right, expr.left, expr.right.left.name)  # 11
-    if isinstance(expr, Power):
-        expr_left_type = get_arrangement_type(expr.left)[0]
-        if expr_left_type == 'Non-digit':
-            expr_right_type = get_arrangement_type(expr.right)[0]
-            if expr_right_type == 'Non-digit' or expr_right_type == 'Digit':
-                return ('Non-digit', expr.left, expr.right, Const(1), None)  # 16, 17
-        if expr_left_type == 'Digit':
-            if get_arrangement_type(expr.right)[0] == 'Non-digit':
-                return ('Digit', expr.left, expr.right, Const(1), None)  # 19
-        if expr_left_type in {'Non-digit', 'Digit'}:
-            if get_arrangement_type(expr.right)[0] == 'Power':
-                return ('Exponential', expr.left, expr.right, Const(1), None)  # 6, 7
-        if get_arrangement_type(expr.right)[0] in {'Non-digit', 'Digit'}:
-            if isinstance(expr.left, Var):
-                return ('Power', expr.left, expr.right, Const(1), None)  # 2
-            if isinstance(expr.left, Func):
-                return ('Function', expr.left, expr.right, Const(1), expr.left.name)  # 12
-
-    return ('Other', expr, Const(1), Const(1), None)
 
 
 class BinOp(Expr):
@@ -257,9 +224,12 @@ class Plus(BinOp):
         # Step 1: Insert all the non-Plus Expr objects into a list
         lst = expr_to_list(self, self)
         # assert(len(lst) >= 2)
+        print([str(item) for item in lst])
 
         # Step 2: Sort the list
-        lst.sort()
+        lst.sort(reverse=True)
+
+        print([str(item) for item in lst])
 
         # Step 3: Insert all the objects into a new Plus binary tree
         tree = Plus(lst[0], lst[1])
@@ -350,6 +320,8 @@ class Multiply(BinOp):
 
         # Multiply * Multiply
         if isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
+            # TODO: DEBUG FOR INPUT a * b * c * d * e ^ 999
+
             #           *
             #          / \
             #         *   *
@@ -377,6 +349,11 @@ class Multiply(BinOp):
                                          self.right.left.simplify()).simplify())  # .simplify()
 
         return Multiply(self.left.simplify(), self.right.simplify())
+
+    def rearrange(self) -> Any:
+        """Rearrange the Multiply expression."""
+        # TODO: IMPLEMENT
+        pass
 
 
 class Const(Num):
@@ -587,6 +564,77 @@ class Log(Func):
         if self.base.name == 'e' and isinstance(self.arg, Const) and self.arg.name == 'e':
             return Const(1)
         return Log(self.base, self.arg.simplify())
+
+
+def process_to_list(obj: Expr) -> list[tuple[str, int | float | str]]:
+    """For processing 'Non-digit' Expr objects. Outputs a list, with each element being a tuple in the form
+    of (base, exponent)
+
+    Example: a * b ^ 2 * c ^ 3 is processed to [('a', 1), ('b', 2), ('c', 3)]
+
+    Preconditions:
+        - obj is a valid 'Non-digit' object
+    """
+    if isinstance(obj, Const) and isinstance(obj.name, str):  # 13
+        return [(obj.name, 1)]
+    if isinstance(obj, Multiply):  # 15
+        return process_to_list(obj.left) + process_to_list(obj.right)
+    if isinstance(obj, Power) and isinstance(obj.left, Const) and isinstance(obj.right, Const) and \
+            isinstance(obj.left.name, str):  # 16, 17
+        return [(obj.left.name, obj.right.name)]
+    return []
+
+
+def get_arrangement_type(expr: Expr) -> tuple:  # TODO: TEST
+    """Returns a tuple in the form of:
+    (type, base, exponent, coefficient, function_name)
+    """
+    if isinstance(expr, Var):
+        return ('Power', expr, Const(1), Const(1), None)  # 4
+    if isinstance(expr, Func):
+        return ('Function', expr, Const(1), Const(1), expr.name)  # 10
+    if isinstance(expr, Const) and isinstance(expr.name, str):
+        return ('Non-digit', expr, Const(1), Const(1), None)  # 13
+    if isinstance(expr, Const) and (isinstance(expr.name, int) or isinstance(expr.name, float)):
+        return ('Digit', expr, Const(1), Const(1), None)  # 18
+    if isinstance(expr, Multiply):
+        expr_left_type = get_arrangement_type(expr.left)[0]
+        if expr_left_type == 'Non-digit':
+            if get_arrangement_type(expr.right)[0] == 'Non-digit':
+                return ('Non-digit', expr, Const(1), Const(1), None)  # 15
+        if expr_left_type == 'Digit':
+            if get_arrangement_type(expr.right)[0] == 'Non-digit':
+                return ('Non-digit', expr.right, Const(1), expr.left, None)  # 14
+        if expr_left_type in {'Non-digit', 'Digit'}:
+            if isinstance(expr.right, Power) and isinstance(expr.right.left, Var) \
+                    and get_arrangement_type(expr.right.right)[0] in {'Non-digit', 'Digit'}:
+                return ('Power', expr.right.left, expr.right.right, expr.left, None)  # 1
+            if isinstance(expr.right, Var):
+                return ('Power', expr.right, Const(1), expr.left, None)  # 3
+            if isinstance(expr.right, Power) and get_arrangement_type(expr.right.left)[0] in {'Non-digit',
+                                                                                              'Digit'} \
+                    and get_arrangement_type(expr.right.right)[0] == 'Power':
+                return ('Exponential', expr.right.left, expr.right.right, expr.left, None)  # 5, 8
+            if isinstance(expr.right, Func):
+                return ('Function', expr, Const(1), expr.left, expr.right.name)  # 9
+            if isinstance(expr.right, Power) and isinstance(expr.right.left, Func) \
+                    and get_arrangement_type(expr.right.right)[0] in {'Non-digit', 'Digit'}:
+                return ('Function', expr.right.left, expr.right.right, expr.left, expr.right.left.name)  # 11
+    if isinstance(expr, Power):
+        if isinstance(expr.left, Const) and isinstance(expr.left.name, str):
+            if isinstance(expr.right, Const):
+                return ('Non-digit', expr.left, expr.right, Const(1), None)  # 16, 17
+        expr_left_type = get_arrangement_type(expr.left)[0]
+        if expr_left_type in {'Non-digit', 'Digit'}:
+            if get_arrangement_type(expr.right)[0] == 'Power':
+                return ('Exponential', expr.left, expr.right, Const(1), None)  # 6, 7
+        if get_arrangement_type(expr.right)[0] in {'Non-digit', 'Digit'}:
+            if isinstance(expr.left, Var):
+                return ('Power', expr.left, expr.right, Const(1), None)  # 2
+            if isinstance(expr.left, Func):
+                return ('Function', expr.left, expr.right, Const(1), expr.left.name)  # 12
+
+    return ('Other', expr, Const(1), Const(1), None)
 
 
 class LogZeroError(Exception):

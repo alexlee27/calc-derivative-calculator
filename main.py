@@ -224,5 +224,41 @@ def main() -> None:
     print('Program is done')
 
 
+def tester() -> None:
+    """Tester function.
+    """
+    while True:
+        infix_expression = input('\nEnter a math expression to test (type \'stop\' to stop): ')
+        if len(infix_expression) == 4 and infix_expression.lower() == 'stop':
+            break
+        variable = input('Enter the name of the variable to differentiate with respect to: ')
+        expr = string_to_expr(infix_expression, {variable})
+        print(expr)
+        if expr is not None:
+            prompt = input('\'s\' for simplifying, \'r\' for rearranging')
+            if prompt.lower() == 's':
+                prev = expr
+                simplified = prev.simplify()
+                while str(simplified) != str(prev):
+                    print(prev)
+                    prev, simplified = simplified, simplified.simplify()
+                print(simplified)
+            while prompt.lower() == 'r':
+                # print('1')
+                prev = expr
+                rearranged = prev.rearrange()
+                # while str(rearranged) != str(prev):
+                #     print(prev)
+                #     prev, rearranged = rearranged, rearranged.rearrange()
+                # print('2')
+                print(rearranged)
+                prompt = input('\'r\' for rearranging')
+    print('Program is done')
+
+
 if __name__ == '__main__':
-    main()
+    prompt = input('\'d\' to differentiate, \'t\' to test:')
+    if prompt == 'd':
+        main()
+    if prompt == 't':
+        tester()
