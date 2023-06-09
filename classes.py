@@ -84,7 +84,7 @@ class Expr:
                 print(other_list)
 
                 i = 0
-                while i < len(self_list) and i < len(other_list):  # todo: debug
+                while i < len(self_list) and i < len(other_list):
                     if self_list[i][0] > other_list[i][0]:  # Note that 'b' > 'a' evaluates to True
                         print('2nd one has higher priority')
                         return True
@@ -94,14 +94,27 @@ class Expr:
                             if self_list[i][1] < other_list[i][1]:  # Note that 2 < 3 evaluates to True
                                 print('2nd one has higher priority')
                                 return True
+                            if self_list[i][1] > other_list[i][1]:
+                                print('1st one has higher priority')
+                                return False
                         if isinstance(self_list[i][1], str) and isinstance(other_list[i][1], str):
                             if self_list[i][1] > other_list[i][1]:  # Note that 'b' > 'a' evaluates to True
                                 print('2nd one has higher priority')
+                                return True
+                            if self_list[i][1] < other_list[i][1]:
+                                print('1st one has higher priority')
                                 return True
                         if not isinstance(self_list[i][1], str) and isinstance(other_list[i][1], str):
                             # Alphabets take precedence over digits
                             print('2nd one has higher priority')
                             return True
+                        if isinstance(self_list[i][1], str) and not isinstance(other_list[i][1], str):
+                            # Alphabets take precedence over digits
+                            print('1st one has higher priority')
+                            return False
+                    elif self_list[i][0] < other_list[i][0]:
+                        print('1st one has higher priority')
+                        return False
                     i += 1
             elif self_type == 'Digit':
                 if isinstance(self_base, Const) and isinstance(other_base, Const):
