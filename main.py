@@ -239,9 +239,11 @@ def tester() -> None:
             if prompt.lower() == 's':
                 prev = expr
                 simplified = prev.simplify()
-                while str(simplified) != str(prev):
+                prompt = input('continue? n to stop')
+                while prompt != 'n':
                     print(prev)
                     prev, simplified = simplified, simplified.simplify()
+                    prompt = input('continue? n to stop')
                 print(simplified)
             while prompt.lower() == 'r':
                 # print('1')

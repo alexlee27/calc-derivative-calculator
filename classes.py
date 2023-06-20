@@ -365,8 +365,23 @@ class Multiply(BinOp):
 
     def rearrange(self) -> Any:
         """Rearrange the Multiply expression."""
-        # TODO: IMPLEMENT
-        pass
+        # Step 1: Insert all the non-Plus Expr objects into a list
+        lst = expr_to_list(self, self)
+        # assert(len(lst) >= 2)
+        print([str(item) for item in lst])
+
+        # Step 2: Sort the list
+        lst.sort(reverse=True)
+
+        print([str(item) for item in lst])
+
+        # Step 3: Insert all the objects into a new Multiply binary tree
+        # todo: continue implementing
+        tree = Plus(lst[0], lst[1])
+        for i in range(2, len(lst)):
+            tree = Plus(tree, lst[i])
+
+        return tree
 
 
 class Const(Num):
