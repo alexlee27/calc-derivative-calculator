@@ -1,16 +1,9 @@
-# Calculus Derivative Calculator
+# Calculus Derivative Calculator (Beta)
 This is a **calculus [derivative](https://en.wikipedia.org/wiki/Derivative) (differentiation) calculator** built with Python from *scratch* (without any math-related libraries like SymPy!) using [binary expression trees](https://en.wikipedia.org/wiki/Binary_expression_tree) and a lot of recursion.
-
-## 🎬 Demo
-
-## :technologist: How to use
-
-
 
 ## ⚙ How it works
 ### Input
 - Using the [Shunting yard algorithm](https://en.wikipedia.org/wiki/Shunting_yard_algorithm), the program converts a "normal" (also known as "infix notation"; e.g. $(2 + 3) \times 5 - 1$) mathematical expression to a [binary expression tree](https://en.wikipedia.org/wiki/Binary_expression_tree) object.
-### Differentiation
 
 ## 📚 Acknowledgements
 - [This Wikipedia article](https://en.wikipedia.org/wiki/Binary_expression_tree) and [this GeeksForGeeks article](https://www.geeksforgeeks.org/program-to-convert-infix-notation-to-expression-tree/) which helped me with understanding and implementing the Shunting yard algorithm.
