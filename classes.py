@@ -376,12 +376,42 @@ class Multiply(BinOp):
         print([str(item) for item in lst])
 
         # Step 3: Insert all the objects into a new Multiply binary tree
-        # todo: continue implementing
-        tree = Plus(lst[0], lst[1])
-        for i in range(2, len(lst)):
-            tree = Plus(tree, lst[i])
+        #      *
+        #     / \
+        # coeff  *
+        #       / \
+        #     ... power
 
-        return tree
+        # Dealing with Power objects first
+        power_tree = None
+        i = None
+        if get_arrangement_type(lst[0])[0] == 'Power':
+            power_tree = Multiply(None, lst[0])
+            i = 1
+            end_of_power = None
+            while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Power':
+                power_tree = Multiply(power_tree, lst[i])
+                if i == 1:
+                    end_of_power = power_tree
+                i += 1
+            if i == len(lst) and isinstance(end_of_power.left, Multiply):  # All items were Power objects
+                end_of_power.left = end_of_power.left.right
+                return power_tree
+
+        # Deal with everything else... except for numbers (coefficients)
+        if i:  # If the first element was a Power object
+            if i == len(lst) - 1:  # If i is pointing to the last element in lst
+                rest_tree = lst[i]
+            else:
+                rest_tree = lst[i]
+                i += 1
+                while i < len(lst) and get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:
+                    # todo: filter out Pow objects with negative exponenets
+                    rest_tree = Multiply(rest_tree, lst[i])
+                    i += 1
+        # todo: keep implementing
+
+
 
 
 class Const(Num):
