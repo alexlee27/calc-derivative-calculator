@@ -386,7 +386,7 @@ class Multiply(BinOp):
         power_tree = None
         i = None
         if get_arrangement_type(lst[0])[0] == 'Power':
-            power_tree = Multiply(None, lst[0])
+            power_tree = Multiply(None, lst[0])  # Todo: replace None with something else? (some kind of dummy holder)
             i = 1
             end_of_power = None
             while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Power':
