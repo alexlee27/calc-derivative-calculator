@@ -412,8 +412,6 @@ class Multiply(BinOp):
         # todo: keep implementing
 
 
-
-
 class Const(Num):
     """Represents a constant number.
 
