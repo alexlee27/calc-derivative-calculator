@@ -385,10 +385,10 @@ class Multiply(BinOp):
         # Dealing with Power objects first
         power_tree = None
         i = None
+        end_of_power = None
         if get_arrangement_type(lst[0])[0] == 'Power':
             power_tree = Multiply(None, lst[0])  # Todo: replace None with something else? (some kind of dummy holder)
             i = 1
-            end_of_power = None
             while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Power':
                 power_tree = Multiply(power_tree, lst[i])
                 if i == 1:
@@ -399,16 +399,28 @@ class Multiply(BinOp):
                 return power_tree
 
         # Deal with everything else... except for numbers (coefficients)
-        if i:  # If the first element was a Power object
-            if i == len(lst) - 1:  # If i is pointing to the last element in lst
-                rest_tree = lst[i]
-            else:
-                rest_tree = lst[i]
+        if power_tree:  # If the first element was a Power object
+            rest_tree = lst[i]
+            i += 1
+            while i < len(lst) and get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:
+                # todo: filter out Pow objects with negative exponents
+                rest_tree = Multiply(rest_tree, lst[i])
                 i += 1
-                while i < len(lst) and get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:
-                    # todo: filter out Pow objects with negative exponenets
-                    rest_tree = Multiply(rest_tree, lst[i])
-                    i += 1
+            end_of_power.left.left = rest_tree
+
+            if i == len(lst):  # If the end of lst has been reached
+                return power_tree
+
+            if get_arrangement_type(lst[i])[0] == 'Non-digit':
+                non_digit_tree = lst[i]
+
+            while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Non-digit':  # Fetching Non-digits first
+                non_digit_tree =
+
+        if not power_tree:  # If there are no Power objects
+            ...
+
+
         # todo: keep implementing
 
 
