@@ -411,11 +411,17 @@ class Multiply(BinOp):
             if i == len(lst):  # If the end of lst has been reached
                 return power_tree
 
+            non_digit_tree = None
             if get_arrangement_type(lst[i])[0] == 'Non-digit':
                 non_digit_tree = lst[i]
+                i += 1
 
             while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Non-digit':  # Fetching Non-digits first
-                non_digit_tree =
+                non_digit_tree = Multiply(non_digit_tree, lst[i])
+                i += 1
+
+            if i == len(lst):  # If the end of lst has been reached
+                return Multiply(non_digit_tree, power_tree)
 
         if not power_tree:  # If there are no Power objects
             ...
