@@ -400,8 +400,9 @@ class Multiply(BinOp):
 
         # Deal with everything else... except for numbers (coefficients)
         if power_tree:  # If the first element was a Power object
-            rest_tree = lst[i]
-            i += 1
+            # todo: if lst[i] is a rest element:
+                rest_tree = lst[i]
+                i += 1
             while i < len(lst) and get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:
                 # todo: filter out Pow objects with negative exponents
                 rest_tree = Multiply(rest_tree, lst[i])
