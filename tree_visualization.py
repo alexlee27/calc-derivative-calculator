@@ -36,7 +36,7 @@ def tree_to_svg(G: pydot.Dot, tree: Expr, visited_names: set, identifier: int) -
         node = pydot.Node(name=root_name, label='*')
     elif isinstance(tree, Const):
         node = pydot.Node(name=root_name, label=str(tree.name))
-    elif isinstance(tree, Power):
+    elif isinstance(tree, Pow):
         node = pydot.Node(name=root_name, label='^')
     elif isinstance(tree, Var):
         node = pydot.Node(name=root_name, label=tree.name)
@@ -61,7 +61,7 @@ def tree_to_svg(G: pydot.Dot, tree: Expr, visited_names: set, identifier: int) -
         edge = pydot.Edge(root_name, str(new_identifier))
         G.add_edge(edge)
 
-    if isinstance(tree, Power):
+    if isinstance(tree, Pow):
         # Recurse into the base
         tree_to_svg(G, tree.left, visited_names, new_identifier)
         edge = pydot.Edge(root_name, str(new_identifier))

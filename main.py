@@ -175,11 +175,11 @@ def str_to_bin_op(token: str, left: Expr, right: Expr) -> BinOp:
         - token in {'^', '*', '/', '+', '-'}
     """
     if token == '^':
-        return Power(left, right)
+        return Pow(left, right)
     if token == '*':
         return Multiply(left, right)
     if token == '/':
-        return Multiply(left, Power(right, Const(-1)))
+        return Multiply(left, Pow(right, Const(-1)))
     if token == '+':
         return Plus(left, right)
     if token == '-':

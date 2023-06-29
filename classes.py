@@ -299,17 +299,17 @@ class Multiply(BinOp):
                 return Const(0)
 
         if str(self.left) == str(self.right):
-            return Power(self.left.simplify(), Const(2))
+            return Pow(self.left.simplify(), Const(2))
 
         if isinstance(self.left, Const) and isinstance(self.right, Const) and not isinstance(self.left.name, str) \
                 and not isinstance(self.right.name, str):
             return Const(self.left.name * self.right.name)
 
         # Power * Power with same bases
-        if isinstance(self.left, Power) and isinstance(self.right, Power) \
+        if isinstance(self.left, Pow) and isinstance(self.right, Pow) \
                 and str(self.left.left) == str(self.right.left):
-            return Power(self.left.left.simplify(),
-                         Plus(self.left.right.simplify(), self.right.right.simplify()).simplify())
+            return Pow(self.left.left.simplify(),
+                       Plus(self.left.right.simplify(), self.right.right.simplify()).simplify())
 
         # <some_type> * (<some_type> * Expr)
         if isinstance(self.right, Multiply) and type(self.left) == type(self.right.left):
@@ -382,53 +382,132 @@ class Multiply(BinOp):
         #       / \
         #     ... power
 
+
+
         # Dealing with Power objects first
-        power_tree = None
-        i = None
-        end_of_power = None
-        if get_arrangement_type(lst[0])[0] == 'Power':
-            power_tree = Multiply(None, lst[0])  # Todo: replace None with something else? (some kind of dummy holder)
-            i = 1
-            while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Power':
-                power_tree = Multiply(power_tree, lst[i])
-                if i == 1:
-                    end_of_power = power_tree
-                i += 1
-            if i == len(lst) and isinstance(end_of_power.left, Multiply):  # All items were Power objects
-                end_of_power.left = end_of_power.left.right
+        i = 0
+        if get_arrangement_type(lst[0])[0] == 'Power':  # Is it a Power?
+            create power tree; filter out any powers with negative exponents
+            if i == len(lst):
                 return power_tree
+            elif is a rest:  # Is it a "Rest"?
+                create rest tree; filter out any powers with negative exponents
+                attatch rest tree to power tree
+                if i == len(lst):
+                    return power_tree
+                elif is a non-digit:  # Is it a Non-digit?
+                    create non digit tree
+                    if i == len(lst):
+                        return Multiply(non_digit_tree, power_tree)
+                    else:  # Must be a Digit
+                        create digit tree
+                        return Multiply(Multiply(digit_tree, non_digit_tree), power_tree)
+                else:  # Must be a Digit
+                    create digit tree
+                    return Multiply(digit_tree, Multiply(rest_tree, power_tree))
+            elif is a non-digit:  # Is it a Non-digit?
+                create non digit treeeee
+                if i == len(lst):
+                    return Multiply(non_digit_tree, power_tree)
+                else:  # Must be a Digit
+                    create digit treee
+                    return Multiply(Multiply(digit_tree, non_digit_tree), power_tree)
+            else:  # Must be a digit tree
+                create digit treee
+                return Multiply(digit_tree, power_tree)
+        elif is a Rest:  # Is it a Rest?
+            create rest treee
+            if i == len(lst):
+                return rest_tree
+            elif is a non-digit:  # Is it a Non-digit?
+                create non digit treee
+                if i == len(lst):
+                    return Multiply(non_digit_tree, rest_tree)
+                else:  # Must be a Digit
+                    create digit treee
+                    return Multiply(Multiply(digit_tree, non_digit_tree), rest_tree)
+            else:  # Must be a Digit
+                create digit treee
+                return Multiply(digit_tree, rest_tree)
+        elif is a non_digit:  # Is it a Non-digit?
+            create non digit treee
+            if i == len(lst):
+                return non_digit_tree
+            else:  # Must be a digit
+                create digit treeee
+                return Multiply(digit_tree, non_digit_tree)
+        else:  # Must be a Digit
+            create digit treeee
+            return digit_tree
 
-        # Deal with everything else... except for numbers (coefficients)
-        if power_tree:  # If the first element was a Power object
-            # todo: if lst[i] is a rest element:
-                rest_tree = lst[i]
-                i += 1
-            while i < len(lst) and get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:
-                # todo: filter out Pow objects with negative exponents
-                rest_tree = Multiply(rest_tree, lst[i])
-                i += 1
-            end_of_power.left.left = rest_tree
 
-            if i == len(lst):  # If the end of lst has been reached
-                return power_tree
-
-            non_digit_tree = None
-            if get_arrangement_type(lst[i])[0] == 'Non-digit':
-                non_digit_tree = lst[i]
-                i += 1
-
-            while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Non-digit':  # Fetching Non-digits first
-                non_digit_tree = Multiply(non_digit_tree, lst[i])
-                i += 1
-
-            if i == len(lst):  # If the end of lst has been reached
-                return Multiply(non_digit_tree, power_tree)
-
-        if not power_tree:  # If there are no Power objects
-            ...
+        #
+        # power_tree = Multiply(None, lst[0])  # Todo: replace None with something else? (some kind of dummy holder)
+        #             i = 1
+        #
+        #             if i == len(lst) and isinstance(end_of_power.left, Multiply):  # All items were Power objects
+        #                 end_of_power.left = end_of_power.left.right
+        #                 return power_tree
+        # # Deal with everything else... except for numbers (coefficients)
+        # if power_tree:  # If the first element was a Power object
+        #     # todo: if lst[i] is a rest element:
+        #         rest_tree = lst[i]
+        #         i += 1
+        #     while i < len(lst) and get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:
+        #         # todo: filter out Pow objects with negative exponents
+        #         rest_tree = Multiply(rest_tree, lst[i])
+        #         i += 1
+        #     end_of_power.left.left = rest_tree
+        #
+        #     if i == len(lst):  # If the end of lst has been reached
+        #         return power_tree
+        #
+        #     non_digit_tree = None
+        #     if get_arrangement_type(lst[i])[0] == 'Non-digit':
+        #         non_digit_tree = lst[i]
+        #         i += 1
+        #
+        #     while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Non-digit':  # Fetching Non-digits first
+        #         non_digit_tree = Multiply(non_digit_tree, lst[i])
+        #         i += 1
+        #
+        #     if i == len(lst):  # If the end of lst has been reached
+        #         return Multiply(non_digit_tree, power_tree)
+        #
+        # if not power_tree:  # If there are no Power objects
+        #     ...
 
 
         # todo: keep implementing
+
+def get_power_tree(self, i: int, lst: list, power_tree: Expr, fractions: Optional[Expr]) -> tuple:
+    """Returns a tuple in the form of (power_tree, new_index, end_of_power, fractions),
+    where fractions is a Multiply object containing any Pow objects with negative exponents.
+    fractions is None if there are no Pow objects with negative exponents.
+    """
+    end_of_power = None
+    while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Power':
+        if isinstance(lst[i], Pow) and # todo lst[i].right is negative:
+            if fractions is None:  # If this is the first fraction
+                fractions = lst[i]
+            else:
+                fractions = Multiply(fractions, lst[i])
+        else:
+            power_tree = Multiply(power_tree, lst[i])
+            if i == 1:
+                end_of_power = power_tree
+        i += 1
+    return (power_tree, i, end_of_power, fractions)
+
+def get_rest_tree():
+    # todo: filter out fractions
+    ...
+
+def get_non_digit_tree():
+    ...
+
+def get_digit_tree():
+    ...
 
 
 class Const(Num):
@@ -451,7 +530,7 @@ class Const(Num):
         return self
 
 
-class Power(BinOp):
+class Pow(BinOp):
     """Represents the binary operation of exponentiation (power).
 
     Instance Attributes:
@@ -478,7 +557,7 @@ class Power(BinOp):
         if not isinstance(self.left, Const) and isinstance(self.right, Const) \
                 and (isinstance(self.right.name, int) or (isinstance(self.right.name, float))):
             return Multiply(Multiply(self.right,
-                                     Power(self.left, Const(self.right.name - 1))), self.left.differentiate(respect_to))
+                                     Pow(self.left, Const(self.right.name - 1))), self.left.differentiate(respect_to))
 
         # e ^ f(x)
         if isinstance(self.left, Const) and self.left.name == 'e':
@@ -489,7 +568,7 @@ class Power(BinOp):
             return Multiply(self, Multiply(Log(Const('e'), self.left), self.right.differentiate(respect_to)))
 
     def simplify(self) -> Expr:
-        return Power(self.left.simplify(), self.right.simplify())
+        return Pow(self.left.simplify(), self.right.simplify())
 
 
 class Var(Num):
@@ -551,7 +630,7 @@ class Trig(Func):
                                      )
                             )
         if self.name == 'tan':
-            return Multiply(Power(Trig('sec', self.arg), Const(2)),
+            return Multiply(Pow(Trig('sec', self.arg), Const(2)),
                             self.arg.differentiate(respect_to)
                             )
         if self.name == 'sec':
@@ -570,23 +649,23 @@ class Trig(Func):
                             )
         if self.name == 'cot':
             return Multiply(Const(-1),
-                            Multiply(Power(Trig('csc', self.arg), Const(2)),
+                            Multiply(Pow(Trig('csc', self.arg), Const(2)),
                                      self.arg.differentiate(respect_to)
                                      )
                             )
 
         if self.name == 'arcsin':
             return Multiply(self.arg.differentiate(respect_to),
-                            Power(Plus(Const(1),
-                                       Multiply(Const(-1),
-                                                Power(self.arg,
-                                                      Const(2)))), Const(-0.5))
+                            Pow(Plus(Const(1),
+                                     Multiply(Const(-1),
+                                              Pow(self.arg,
+                                                  Const(2)))), Const(-0.5))
                             )
         if self.name == 'arccos':
             return Multiply(Const(-1), Trig('arcsin', self.arg).differentiate(respect_to))
         if self.name == 'arctan':
             return Multiply(self.arg.differentiate(respect_to),
-                            Power(Plus(Power(self.arg, Const(2)), Const(1)), Const(-1))
+                            Pow(Plus(Pow(self.arg, Const(2)), Const(1)), Const(-1))
                             )
 
     def simplify(self) -> Expr:
@@ -626,10 +705,10 @@ class Log(Func):
     def differentiate(self, respect_to: str) -> Expr:
         if not isinstance(self.arg, Const):
             if self.base.name == 'e':
-                return Multiply(self.arg.differentiate(respect_to), Power(self.arg, Const(-1)))
+                return Multiply(self.arg.differentiate(respect_to), Pow(self.arg, Const(-1)))
             else:
                 return Multiply(self.arg.differentiate(respect_to),
-                                Power(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1))
+                                Pow(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1))
                                 )
         else:
             # Then it is a constant!
@@ -654,7 +733,7 @@ def process_to_list(obj: Expr) -> list[tuple[str, int | float | str]]:
         return [(obj.name, 1)]
     if isinstance(obj, Multiply):  # 15
         return process_to_list(obj.left) + process_to_list(obj.right)
-    if isinstance(obj, Power) and isinstance(obj.left, Const) and isinstance(obj.right, Const) and \
+    if isinstance(obj, Pow) and isinstance(obj.left, Const) and isinstance(obj.right, Const) and \
             isinstance(obj.left.name, str):  # 16, 17
         return [(obj.left.name, obj.right.name)]
     return []
@@ -681,21 +760,21 @@ def get_arrangement_type(expr: Expr) -> tuple:  # TODO: TEST
             if get_arrangement_type(expr.right)[0] == 'Non-digit':
                 return ('Non-digit', expr.right, Const(1), expr.left, None)  # 14
         if expr_left_type in {'Non-digit', 'Digit'}:
-            if isinstance(expr.right, Power) and isinstance(expr.right.left, Var) \
+            if isinstance(expr.right, Pow) and isinstance(expr.right.left, Var) \
                     and get_arrangement_type(expr.right.right)[0] in {'Non-digit', 'Digit'}:
                 return ('Power', expr.right.left, expr.right.right, expr.left, None)  # 1
             if isinstance(expr.right, Var):
                 return ('Power', expr.right, Const(1), expr.left, None)  # 3
-            if isinstance(expr.right, Power) and get_arrangement_type(expr.right.left)[0] in {'Non-digit',
+            if isinstance(expr.right, Pow) and get_arrangement_type(expr.right.left)[0] in {'Non-digit',
                                                                                               'Digit'} \
                     and get_arrangement_type(expr.right.right)[0] == 'Power':
                 return ('Exponential', expr.right.left, expr.right.right, expr.left, None)  # 5, 8
             if isinstance(expr.right, Func):
                 return ('Function', expr, Const(1), expr.left, expr.right.name)  # 9
-            if isinstance(expr.right, Power) and isinstance(expr.right.left, Func) \
+            if isinstance(expr.right, Pow) and isinstance(expr.right.left, Func) \
                     and get_arrangement_type(expr.right.right)[0] in {'Non-digit', 'Digit'}:
                 return ('Function', expr.right.left, expr.right.right, expr.left, expr.right.left.name)  # 11
-    if isinstance(expr, Power):
+    if isinstance(expr, Pow):
         if isinstance(expr.left, Const) and isinstance(expr.left.name, str):
             if isinstance(expr.right, Const):
                 return ('Non-digit', expr.left, expr.right, Const(1), None)  # 16, 17
