@@ -521,11 +521,13 @@ def get_power_tree(i: int, lst: list, power_tree: Expr, fractions: Optional[Expr
     """
     end_of_power = None
     while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Power':
-        if isinstance(lst[i], Pow) and is_negative(lst[i].right):
-            if fractions is None:  # If this is the first fraction
-                fractions = lst[i]
-            else:
-                fractions = Multiply(fractions, lst[i])
+        if isinstance(lst[i], Pow):
+            negative, abs_of_exponent = is_negative(lst[i].right)
+            if negative:
+                if fractions is None:  # If this is the first fraction
+                    fractions = Pow(lst[i].left, abs_of_exponent)
+                else:
+                    fractions = Multiply(fractions, Pow(lst[i].left, abs_of_exponent))
         else:
             power_tree = Multiply(power_tree, lst[i])
             if i == 1:
@@ -540,7 +542,7 @@ def get_rest_tree(i: int, lst: list, rest_tree: Expr, fractions: Optional[Expr])
     fractions is None if there are no Pow objects with negative exponents.
     """
     while i < len(lst) and get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:
-        if isinstance(lst[i], Pow) and is_negative(lst[i].right):
+        if isinstance(lst[i], Pow) and is_negative(lst[i].right)[0]:
             if fractions is None:  # If this is the first fraction
                 fractions = lst[i]
             else:
@@ -557,7 +559,7 @@ def get_non_digit_tree(i: int, lst: list, non_digit_tree: Expr, fractions: Optio
     fractions is None if there are no Pow objects with negative exponents.
     """
     while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Non-digit':
-        if isinstance(lst[i], Pow) and is_negative(lst[i].right):
+        if isinstance(lst[i], Pow) and is_negative(lst[i].right)[0]:
             if fractions is None:  # If this is the first fraction
                 fractions = lst[i]
             else:
@@ -575,6 +577,11 @@ def get_digit_tree(i: int, lst: list, digit_tree: Expr) -> Expr:
         non_digit_tree = Multiply(digit_tree, lst[i])
         i += 1
     return digit_tree
+
+
+def is_negative(expr: Expr) -> tuple[bool, Expr]:
+    """"""
+
 
 
 class Const(Num):
