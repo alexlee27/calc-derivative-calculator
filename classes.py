@@ -122,6 +122,13 @@ class Expr:
             return False
 
 
+class Nothing(Expr):
+    """A class representing an Expr dummy holder."""
+
+    def __init__(self) -> None:
+        pass
+
+
 class BinOp(Expr):
     """An abstract class representing a binary operation.
 
@@ -385,14 +392,17 @@ class Multiply(BinOp):
         i = 0
         fractions = None
         if get_arrangement_type(lst[i])[0] == 'Power':  # Is it a Power?
-            power_tree = Multiply(None, lst[0])  # Todo: replace None with something else? (some kind of dummy holder)
+            power_tree = Multiply(Nothing(), lst[0])
             i += 1
             # Create power_tree; filter out any Pows with negative exponents
             power_tree, i, end_of_power, fractions = get_power_tree(i, lst, power_tree, fractions)
 
             if i == len(lst) and isinstance(end_of_power.left, Multiply):  # All items were Power objects
                 end_of_power.left = end_of_power.left.right
-                return power_tree
+                if fractions:
+                    return Multiply(power_tree, Pow(fractions, Const(-1)))
+                else:
+                    return power_tree
             elif get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:  # Is it a "Rest"?
                 rest_tree = lst[i]
                 i += 1
@@ -403,84 +413,127 @@ class Multiply(BinOp):
                 end_of_power.left.left = rest_tree
 
                 if i == len(lst):
-                    return power_tree
+                    if fractions:
+                        return Multiply(power_tree, Pow(fractions, Const(-1)))
+                    else:
+                        return power_tree
                 elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
                     non_digit_tree = lst[i]
                     i += 1
                     # Create non_digit_tree
                     non_digit_tree, i, fractions = get_non_digit_tree(i, lst, non_digit_tree, fractions)
                     if i == len(lst):
-                        return Multiply(non_digit_tree, power_tree)
+                        if fractions:
+                            return Multiply(Multiply(non_digit_tree, power_tree), Pow(fractions, Const(-1)))
+                        else:
+                            return Multiply(non_digit_tree, power_tree)
                     else:  # Must be a Digit
                         digit_tree = lst[i]
                         i += 1
                         # Create digit_tree
                         digit_tree = get_digit_tree(i, lst, digit_tree)
-                        return Multiply(Multiply(digit_tree, non_digit_tree), power_tree)
+                        if fractions:
+                            return Multiply(Multiply(Multiply(digit_tree, non_digit_tree), power_tree),
+                                            Pow(fractions, Const(-1)))
+                        else:
+                            return Multiply(Multiply(digit_tree, non_digit_tree), power_tree)
                 else:  # Must be a Digit
                     digit_tree = lst[i]
                     i += 1
                     # Create digit_tree
                     digit_tree = get_digit_tree(i, lst, digit_tree)
-                    return Multiply(digit_tree, Multiply(rest_tree, power_tree))
+                    if fractions:
+                        return Multiply(Multiply(digit_tree, Multiply(rest_tree, power_tree)),
+                                        Pow(fractions, Const(-1)))
+                    else:
+                        return Multiply(digit_tree, Multiply(rest_tree, power_tree))
             elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
                 non_digit_tree = lst[i]
                 i += 1
                 # Create non_digit_tree
                 non_digit_tree, i, fractions = get_non_digit_tree(i, lst, non_digit_tree, fractions)
                 if i == len(lst):
-                    return Multiply(non_digit_tree, power_tree)
+                    if fractions:
+                        return Multiply(Multiply(non_digit_tree, power_tree), Pow(fractions, Const(-1)))
+                    else:
+                        return Multiply(non_digit_tree, power_tree)
                 else:  # Must be a Digit
                     digit_tree = lst[i]
                     i += 1
                     # Create digit_tree
                     digit_tree = get_digit_tree(i, lst, digit_tree)
-                    return Multiply(Multiply(digit_tree, non_digit_tree), power_tree)
+                    if fractions:
+                        return Multiply(Multiply(Multiply(digit_tree, non_digit_tree), power_tree),
+                                        Pow(fractions, Const(-1)))
+                    else:
+                        return Multiply(Multiply(digit_tree, non_digit_tree), power_tree)
             else:  # Must be a digit tree
                 digit_tree = lst[i]
                 i += 1
                 # Create digit_tree
                 digit_tree = get_digit_tree(i, lst, digit_tree)
-                return Multiply(digit_tree, power_tree)
+                if fractions:
+                    return Multiply(Multiply(digit_tree, power_tree), Pow(fractions, Const(-1)))
+                else:
+                    return Multiply(digit_tree, power_tree)
         elif get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:  # Is it a Rest?
             rest_tree = lst[i]
             i += 1
             # Create rest_tree; filter out any Pows with negative exponents
             rest_tree, i, fractions = get_rest_tree(i, lst, rest_tree, fractions)
             if i == len(lst):
-                return rest_tree
+                if fractions:
+                    return Multiply(rest_tree, Pow(fractions, Const(-1)))
+                else:
+                    return rest_tree
             elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
                 non_digit_tree = lst[i]
                 i += 1
                 # Create non_digit_tree
                 non_digit_tree, i, fractions = get_non_digit_tree(i, lst, non_digit_tree, fractions)
                 if i == len(lst):
-                    return Multiply(non_digit_tree, rest_tree)
+                    if fractions:
+                        return Multiply(Multiply(non_digit_tree, rest_tree), Pow(fractions, Const(-1)))
+                    else:
+                        return Multiply(non_digit_tree, rest_tree)
                 else:  # Must be a Digit
                     digit_tree = lst[i]
                     i += 1
                     # Create digit_tree
                     digit_tree = get_digit_tree(i, lst, digit_tree)
-                    return Multiply(Multiply(digit_tree, non_digit_tree), rest_tree)
+                    if fractions:
+                        return Multiply(Multiply(Multiply(digit_tree, non_digit_tree), rest_tree),
+                                        Pow(fractions, Const(-1)))
+                    else:
+                        return Multiply(Multiply(digit_tree, non_digit_tree), rest_tree)
             else:  # Must be a Digit
                 digit_tree = lst[i]
                 i += 1
                 # Create digit_tree
                 digit_tree = get_digit_tree(i, lst, digit_tree)
-                return Multiply(digit_tree, rest_tree)
+                if fractions:
+                    return Multiply(Multiply(digit_tree, rest_tree), Pow(fractions, Const(-1)))
+                else:
+                    return Multiply(digit_tree, rest_tree)
         elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
             non_digit_tree = lst[i]
             i += 1
             # Create non_digit_tree
             non_digit_tree, i, fractions = get_non_digit_tree(i, lst, non_digit_tree, fractions)
             if i == len(lst):
-                return non_digit_tree
+                if fractions:
+                    return Multiply(non_digit_tree, Pow(fractions, Const(-1)))
+                else:
+                    return non_digit_tree
             else:  # Must be a digit
                 digit_tree = lst[i]
                 i += 1
                 # Create digit_tree
                 digit_tree = get_digit_tree(i, lst, digit_tree)
-                return Multiply(digit_tree, non_digit_tree)
+                if fractions:
+                    return Multiply(Multiply(digit_tree, non_digit_tree), Pow(fractions, Const(-1)))
+                else:
+                    return Multiply(digit_tree, non_digit_tree)
         else:  # Must be a Digit
             digit_tree = lst[i]
             i += 1
@@ -488,11 +541,8 @@ class Multiply(BinOp):
             digit_tree = get_digit_tree(i, lst, digit_tree)
             return digit_tree
 
-        # todo: deal with fractions
         # todo: try using memoization??
 
-        #
-        #
         # # Deal with everything else... except for numbers (coefficients)
         #
         #     if i == len(lst):  # If the end of lst has been reached
@@ -522,7 +572,7 @@ def get_power_tree(i: int, lst: list, power_tree: Expr, fractions: Optional[Expr
     end_of_power = None
     while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Power':
         if isinstance(lst[i], Pow):
-            negative, abs_of_exponent = is_negative(lst[i].right)
+            negative, abs_of_exponent = is_minus(lst[i].right)
             if negative:
                 if fractions is None:  # If this is the first fraction
                     fractions = Pow(lst[i].left, abs_of_exponent)
@@ -542,7 +592,7 @@ def get_rest_tree(i: int, lst: list, rest_tree: Expr, fractions: Optional[Expr])
     fractions is None if there are no Pow objects with negative exponents.
     """
     while i < len(lst) and get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:
-        if isinstance(lst[i], Pow) and is_negative(lst[i].right)[0]:
+        if isinstance(lst[i], Pow) and is_minus(lst[i].right)[0]:
             if fractions is None:  # If this is the first fraction
                 fractions = lst[i]
             else:
@@ -559,7 +609,7 @@ def get_non_digit_tree(i: int, lst: list, non_digit_tree: Expr, fractions: Optio
     fractions is None if there are no Pow objects with negative exponents.
     """
     while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Non-digit':
-        if isinstance(lst[i], Pow) and is_negative(lst[i].right)[0]:
+        if isinstance(lst[i], Pow) and is_minus(lst[i].right)[0]:
             if fractions is None:  # If this is the first fraction
                 fractions = lst[i]
             else:
@@ -571,16 +621,37 @@ def get_non_digit_tree(i: int, lst: list, non_digit_tree: Expr, fractions: Optio
 
 
 def get_digit_tree(i: int, lst: list, digit_tree: Expr) -> Expr:
-    """Returns an updated digit_tree.
-    """
+    """Returns an updated digit_tree."""
     while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Digit':
-        non_digit_tree = Multiply(digit_tree, lst[i])
+        digit_tree = Multiply(digit_tree, lst[i])
         i += 1
     return digit_tree
 
 
-def is_negative(expr: Expr) -> tuple[bool, Expr]:
-    """"""
+def is_minus(expr: Expr) -> tuple[bool, Expr]:  # todo: test
+    """Returns a tuple in the form of (boolean, abs_value), where boolean is whether expr is negative, and
+    abs_value is the absolute value of expr.
+
+    Note: even if expr is, in fact, negative, if it is not simplified then it may not return True.
+    """
+    if isinstance(expr, Const) and (isinstance(expr.name, int) or isinstance(expr.name, float)) and expr.name < 0:
+        return (True, Const(-expr.name))
+    elif isinstance(expr, Multiply):
+        left_is_minus, left_abs_value = is_minus(expr.left)
+        right_is_minus, right_abs_value = is_minus(expr.right)
+        if left_is_minus and not right_is_minus:
+            return (True, Multiply(left_abs_value, right_abs_value))
+        elif right_is_minus and not left_is_minus:
+            return (True, Multiply(left_abs_value, right_abs_value))
+    else:
+        return (False, expr)
+
+
+
+
+
+
+
 
 
 
