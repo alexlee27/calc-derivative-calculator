@@ -1,6 +1,8 @@
 """Classes for mathematical expressions"""
 from typing import *
 
+# todo: run a bunch of test cases for Plus.simplify, Plus.rearrange, Multiply.simplify, and Multiply.rearrange
+
 
 class Expr:
     """An abstract class representing a mathematial expression.
@@ -156,7 +158,7 @@ class Num(Expr):
         self.name = name
 
     def __str__(self) -> str:
-        return str(self.name)
+        return str(self.name) + ' '
 
 
 class Func(Expr):
@@ -185,7 +187,7 @@ class Plus(BinOp):
         super().__init__(left, right)
 
     def __str__(self) -> str:
-        return '(' + str(self.left) + ' + ' + str(self.right) + ')'
+        return '( ' + str(self.left) + '+ ' + str(self.right) + ') '
 
     def differentiate(self, respect_to: str) -> Expr:
         return Plus(self.left.differentiate(respect_to), self.right.differentiate(respect_to))
@@ -280,7 +282,7 @@ class Multiply(BinOp):
         super().__init__(left, right)
 
     def __str__(self) -> str:
-        return '(' + str(self.left) + ' * ' + str(self.right) + ')'
+        return '( ' + str(self.left) + '* ' + str(self.right) + ') '
 
     def differentiate(self, respect_to: str) -> Expr:
         if isinstance(self.left, Const) and not isinstance(self.right, Const):
@@ -398,7 +400,8 @@ class Multiply(BinOp):
             power_tree, i, end_of_power, fractions = get_power_tree(i, lst, power_tree, fractions)
 
             if i == len(lst) and isinstance(end_of_power.left, Multiply):  # All items were Power objects
-                end_of_power.left = end_of_power.left.right
+                if end_of_power:  #todo: does this part work?
+                    end_of_power.left = end_of_power.left.right
                 if fractions:
                     return Multiply(power_tree, Pow(fractions, Const(-1)))
                 else:
@@ -410,7 +413,10 @@ class Multiply(BinOp):
                 rest_tree, i, fractions = get_rest_tree(i, lst, rest_tree, fractions)
 
                 # Attatch rest_tree to power_tree
-                end_of_power.left.left = rest_tree
+                if end_of_power:
+                    end_of_power.left.left = rest_tree
+                else:  # If power_tree contains only 1 Power object
+                    power_tree.left = rest_tree
 
                 if i == len(lst):
                     if fractions:
@@ -592,11 +598,13 @@ def get_rest_tree(i: int, lst: list, rest_tree: Expr, fractions: Optional[Expr])
     fractions is None if there are no Pow objects with negative exponents.
     """
     while i < len(lst) and get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:
-        if isinstance(lst[i], Pow) and is_minus(lst[i].right)[0]:
-            if fractions is None:  # If this is the first fraction
-                fractions = lst[i]
-            else:
-                fractions = Multiply(fractions, lst[i])
+        if isinstance(lst[i], Pow):
+            negative, abs_of_exponent = is_minus(lst[i].right)
+            if negative:
+                if fractions is None:  # If this is the first fraction
+                    fractions = Pow(lst[i].left, abs_of_exponent)
+                else:
+                    fractions = Multiply(fractions, Pow(lst[i].left, abs_of_exponent))
         else:
             rest_tree = Multiply(rest_tree, lst[i])
         i += 1
@@ -609,11 +617,13 @@ def get_non_digit_tree(i: int, lst: list, non_digit_tree: Expr, fractions: Optio
     fractions is None if there are no Pow objects with negative exponents.
     """
     while i < len(lst) and get_arrangement_type(lst[i])[0] == 'Non-digit':
-        if isinstance(lst[i], Pow) and is_minus(lst[i].right)[0]:
-            if fractions is None:  # If this is the first fraction
-                fractions = lst[i]
-            else:
-                fractions = Multiply(fractions, lst[i])
+        if isinstance(lst[i], Pow):
+            negative, abs_of_exponent = is_minus(lst[i].right)
+            if negative:
+                if fractions is None:  # If this is the first fraction
+                    fractions = Pow(lst[i].left, abs_of_exponent)
+                else:
+                    fractions = Multiply(fractions, Pow(lst[i].left, abs_of_exponent))
         else:
             non_digit_tree = Multiply(non_digit_tree, lst[i])
         i += 1
@@ -692,7 +702,7 @@ class Pow(BinOp):
             print('You may not divide by zero. Please try again!')
 
     def __str__(self) -> str:
-        return '(' + str(self.left) + ')^' + '(' + str(self.right) + ')'
+        return '( ' + str(self.left) + ') ^ ( ' + str(self.right) + ') '
 
     def differentiate(self, respect_to: str) -> Expr:
         if isinstance(self.left, Const) and isinstance(self.right, Const):
@@ -713,6 +723,9 @@ class Pow(BinOp):
             return Multiply(self, Multiply(Log(Const('e'), self.left), self.right.differentiate(respect_to)))
 
     def simplify(self) -> Expr:
+        if self.right == Const(1):
+            return self.left.simplify()
+
         return Pow(self.left.simplify(), self.right.simplify())
 
 
@@ -761,7 +774,7 @@ class Trig(Func):
             print(error.msg)
 
     def __str__(self) -> str:
-        return self.name + '(' + str(self.arg) + ')'
+        return self.name + ' ( ' + str(self.arg) + ') '
 
     def differentiate(self, respect_to: str) -> Expr:
         if self.name == 'sin':
@@ -843,9 +856,9 @@ class Log(Func):
 
     def __str__(self) -> str:
         if self.base.name == 'e':
-            return 'ln(' + str(self.arg) + ')'
+            return 'ln ( ' + str(self.arg) + ') '
         else:
-            return 'log' + str(self.base) + '(' + str(self.arg) + ')'
+            return 'log' + str(self.base) + '( ' + str(self.arg) + ') '
 
     def differentiate(self, respect_to: str) -> Expr:
         if not isinstance(self.arg, Const):

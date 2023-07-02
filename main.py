@@ -254,6 +254,7 @@ def tester() -> None:
                 #     prev, rearranged = rearranged, rearranged.rearrange()
                 # print('2')
                 print(rearranged)
+                visualization_runner(rearranged)
                 prompt = input('\'r\' for rearranging')
     print('Program is done')
 
