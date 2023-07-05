@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE-edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <title>Calculus Derivative Calculator</title>
+</head>
+<body>
+    <form action="/" method="post">
+      <label for="input_text">Enter math:</label>
+      <input type="text" id="input_math" name="input_math"><br><br>
+      <input type="submit" value="Submit">
+    </form>
+    <div>
+        {% if result %}
+            $${{ result }}$$
+        {% endif %}
+    </div>
+    <script type="text/javascript" src="{{ url_for('static', filename='index.js')}}"></script>
+</body>
+</html>

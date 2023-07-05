@@ -2,6 +2,7 @@
 from typing import *
 
 # todo: run a bunch of test cases for Plus.simplify, Plus.rearrange, Multiply.simplify, and Multiply.rearrange
+# todo: implement get_latex
 
 
 class Expr:
@@ -9,6 +10,9 @@ class Expr:
     """
 
     def __str__(self) -> Any:
+        return NotImplementedError
+
+    def get_latex(self) -> Any:
         return NotImplementedError
 
     def differentiate(self, respect_to: str) -> Any:
@@ -400,7 +404,7 @@ class Multiply(BinOp):
             power_tree, i, end_of_power, fractions = get_power_tree(i, lst, power_tree, fractions)
 
             if i == len(lst) and isinstance(end_of_power.left, Multiply):  # All items were Power objects
-                if end_of_power:  #todo: does this part work?
+                if end_of_power:
                     end_of_power.left = end_of_power.left.right
                 if fractions:
                     return Multiply(power_tree, Pow(fractions, Const(-1)))
@@ -655,14 +659,6 @@ def is_minus(expr: Expr) -> tuple[bool, Expr]:  # todo: test
             return (True, Multiply(left_abs_value, right_abs_value))
     else:
         return (False, expr)
-
-
-
-
-
-
-
-
 
 
 class Const(Num):

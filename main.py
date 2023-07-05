@@ -224,6 +224,17 @@ def main() -> None:
     print('Program is done')
 
 
+def differentiate(input_text: str, variable: str = 'x') -> str:
+    """Differentiates the mathematical expression represented by input_text,
+    returns LaTeX code of the differentiated expression.
+    """
+    expr = string_to_expr(input_text, {variable})
+    if expr is not None:
+        return expr.differentiate(variable).get_latex()
+    else:
+        return '\\text{Error has occurred!}'
+
+
 def tester() -> None:
     """Tester function.
     """
