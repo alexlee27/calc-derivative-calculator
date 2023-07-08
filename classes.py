@@ -13,6 +13,7 @@ class Expr:
         return NotImplementedError
 
     def get_latex(self) -> Any:
+        """Get the LaTeX code for the expression."""
         return NotImplementedError
 
     def differentiate(self, respect_to: str) -> Any:
@@ -164,6 +165,9 @@ class Num(Expr):
     def __str__(self) -> str:
         return str(self.name) + ' '
 
+    def get_latex(self) -> str:
+        return str(self.name) + ' '
+
 
 class Func(Expr):
     """An abstract class representing a mathematical function.
@@ -192,6 +196,9 @@ class Plus(BinOp):
 
     def __str__(self) -> str:
         return '( ' + str(self.left) + '+ ' + str(self.right) + ') '
+
+    def get_latex(self) -> str:
+        return self.left.get_latex() + '+ ' + self.right.get_latex()
 
     def differentiate(self, respect_to: str) -> Expr:
         return Plus(self.left.differentiate(respect_to), self.right.differentiate(respect_to))
@@ -287,6 +294,17 @@ class Multiply(BinOp):
 
     def __str__(self) -> str:
         return '( ' + str(self.left) + '* ' + str(self.right) + ') '
+
+    def get_latex(self) -> str:
+        if isinstance(self.left, Plus):
+            left_latex = '( ' + self.left.get_latex() + ') '
+        else:
+            left_latex = self.left.get_latex()
+        if isinstance(self.right, Plus):
+            right_latex = '( ' + self.right.get_latex() + ') '
+        else:
+            right_latex = self.right.get_latex()
+        return left_latex + '\\cdot ' + right_latex
 
     def differentiate(self, respect_to: str) -> Expr:
         if isinstance(self.left, Const) and not isinstance(self.right, Const):
@@ -700,6 +718,17 @@ class Pow(BinOp):
     def __str__(self) -> str:
         return '( ' + str(self.left) + ') ^ ( ' + str(self.right) + ') '
 
+    def get_latex(self) -> str:
+        if isinstance(self.left, Plus) or isinstance(self.left, Multiply):
+            left_latex = '( ' + self.left.get_latex() + ') '
+        else:
+            left_latex = self.left.get_latex()
+        if isinstance(self.right, Plus) or isinstance(self.right, Multiply):
+            right_latex = '( ' + self.right.get_latex() + ') '
+        else:
+            right_latex = self.right.get_latex()
+        return '{ ' + left_latex + '} ' + '^' + '{ ' + right_latex + '} '
+
     def differentiate(self, respect_to: str) -> Expr:
         if isinstance(self.left, Const) and isinstance(self.right, Const):
             return Const(0)
@@ -771,6 +800,9 @@ class Trig(Func):
 
     def __str__(self) -> str:
         return self.name + ' ( ' + str(self.arg) + ') '
+
+    def get_latex(self) -> str:
+        return '\\' + self.name + ' ( ' + self.arg.get_latex() + ') '
 
     def differentiate(self, respect_to: str) -> Expr:
         if self.name == 'sin':
@@ -855,6 +887,12 @@ class Log(Func):
             return 'ln ( ' + str(self.arg) + ') '
         else:
             return 'log' + str(self.base) + '( ' + str(self.arg) + ') '
+
+    def get_latex(self) -> str:
+        if self.base.name == 'e':
+            return '\\ln ( ' + self.arg.get_latex() + ') '
+        else:
+            return '\\log_{' + self.base.get_latex() + '}{ ' + self.arg.get_latex() + '} '
 
     def differentiate(self, respect_to: str) -> Expr:
         if not isinstance(self.arg, Const):

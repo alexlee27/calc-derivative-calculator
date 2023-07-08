@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request
-from main import differentiate
+import main
 
 
 app = Flask(__name__)
@@ -11,7 +11,8 @@ def index():
 @app.route('/differentiate', methods=['POST'])
 def differentiate():
     input_text = request.form['input_text']
-    result = differentiate(input_text)
+    print(input_text)
+    result = main.differentiate(input_text)
     return render_template('index.html', result=result)
 
 
