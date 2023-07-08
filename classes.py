@@ -135,6 +135,9 @@ class Nothing(Expr):
     def __init__(self) -> None:
         pass
 
+    def __str__(self) -> str:
+        return 'nothing '
+
 
 class BinOp(Expr):
     """An abstract class representing a binary operation.
@@ -396,6 +399,7 @@ class Multiply(BinOp):
 
     def rearrange(self) -> Any:
         """Rearrange the Multiply expression."""
+        # todo: debug for power * non-digit, power * digit
         # Step 1: Insert all the non-Plus Expr objects into a list
         lst = expr_to_list(self, self)
         # assert(len(lst) >= 2)
@@ -692,6 +696,12 @@ class Const(Num):
     def __init__(self, name: int | float | str) -> None:
         super().__init__(name)
 
+    def get_latex(self) -> str:
+        if self.name == 'pi':
+            return '\\' + self.name + ' '
+        else:
+            super().get_latex()
+
     def differentiate(self, respect_to: str) -> Expr:
         return Const(0)
 
@@ -719,15 +729,13 @@ class Pow(BinOp):
         return '( ' + str(self.left) + ') ^ ( ' + str(self.right) + ') '
 
     def get_latex(self) -> str:
+        if isinstance(self.left, Func):
+            return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '( ' + self.left.arg.get_latex() + ') '
         if isinstance(self.left, Plus) or isinstance(self.left, Multiply):
             left_latex = '( ' + self.left.get_latex() + ') '
         else:
             left_latex = self.left.get_latex()
-        if isinstance(self.right, Plus) or isinstance(self.right, Multiply):
-            right_latex = '( ' + self.right.get_latex() + ') '
-        else:
-            right_latex = self.right.get_latex()
-        return '{ ' + left_latex + '} ' + '^' + '{ ' + right_latex + '} '
+        return '{ ' + left_latex + '} ' + '^' + '{ ' + self.right.get_latex() + '} '
 
     def differentiate(self, respect_to: str) -> Expr:
         if isinstance(self.left, Const) and isinstance(self.right, Const):
