@@ -2,7 +2,11 @@
 from typing import *
 
 # todo: run a bunch of test cases for Plus.simplify, Plus.rearrange, Multiply.simplify, and Multiply.rearrange
-# todo: implement get_latex
+# todo: x ^ x, x ^ e, x ^ pi
+# todo: (-1) ^ x, -1 ^ x, -(1 ^ x); fix how input deals with negative signs with non-digits
+# todo: Func ^ f(x) (e.g. ( ln ( e ) ) ^ x )
+# todo: Func ^ Func (e.g. ( cos ( 1 ) ) ^ sin ( 1 ) )
+# todo: 0 ^ Func and 0 ^ f(x)
 
 
 class Expr:
@@ -700,7 +704,7 @@ class Const(Num):
         if self.name == 'pi':
             return '\\' + self.name + ' '
         else:
-            super().get_latex()
+            return super().get_latex()
 
     def differentiate(self, respect_to: str) -> Expr:
         return Const(0)
@@ -731,7 +735,7 @@ class Pow(BinOp):
     def get_latex(self) -> str:
         if isinstance(self.left, Func):
             return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '( ' + self.left.arg.get_latex() + ') '
-        if isinstance(self.left, Plus) or isinstance(self.left, Multiply):
+        if isinstance(self.left, Plus) or isinstance(self.left, Multiply) or isinstance(self.left, Pow):
             left_latex = '( ' + self.left.get_latex() + ') '
         else:
             left_latex = self.left.get_latex()
