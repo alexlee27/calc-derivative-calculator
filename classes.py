@@ -9,6 +9,7 @@ from typing import *
 # todo: 0 ^ Func and 0 ^ f(x)
 # todo: sort by argument first for (trig) functions?
 # todo: e ^ ln x = x simplification; a ^ (... * loga x * ...) = x ^ ... simplification (an O(n) algorithm that looks through all nodes in the exponent?)
+# todo: logx ^ x????
 
 
 class Expr:
@@ -751,9 +752,13 @@ class Pow(BinOp):
     def get_latex(self) -> str:
         if isinstance(self.right, Const) and self.right.name == -1:
             return '\\displaystyle\\frac{1}{ ' + self.left.get_latex() + '} '
-        if isinstance(self.left, Func):
+        if isinstance(self.left, Trig):
             return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '( ' + self.left.arg.get_latex() + ') '
-        if isinstance(self.left, Plus) or isinstance(self.left, Multiply) or isinstance(self.left, Pow):
+        if isinstance(self.left, Log):
+            if self.left.base.name == 'e':
+                return '{ \\ln } ' + '^' + '{ ' + self.right.get_latex() + '} ' + '( ' + self.left.arg.get_latex() + ') '
+            return '{\\log_{ ' + self.left.base.get_latex() + '} } ' + '^' + '{ ' + self.right.get_latex() + '} ' + '( ' + self.left.arg.get_latex() + ') '
+        if isinstance(self.left, Plus) or isinstance(self.left, Multiply) or isinstance(self.left, Pow) or is_minus(self.left)[0]:
             left_latex = '( ' + self.left.get_latex() + ') '
         else:
             left_latex = self.left.get_latex()
@@ -936,7 +941,7 @@ class Log(Func):
         if self.base.name == 'e':
             return '\\ln ( ' + self.arg.get_latex() + ') '
         else:
-            return '\\log_{' + self.base.get_latex() + '}{ ' + self.arg.get_latex() + '} '
+            return '\\log_{' + self.base.get_latex() + '} ( ' + self.arg.get_latex() + ') '
 
     def differentiate(self, respect_to: str) -> Expr:
         if not isinstance(self.arg, Const):
