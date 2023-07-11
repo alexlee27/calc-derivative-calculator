@@ -230,7 +230,15 @@ def differentiate(input_text: str, variable: str = 'x') -> str:
     """
     expr = string_to_expr(input_text, {variable})
     if expr is not None:
-        return expr.differentiate(variable).get_latex()
+        differentiated = expr.differentiate(variable).rearrange()
+        prev = differentiated
+        simplified = prev.simplify()
+        while str(simplified) != str(prev):
+            print(prev)
+            prev, simplified = simplified, simplified.simplify()
+        print(simplified)
+        visualization_runner(simplified)
+        return simplified.get_latex()
     else:
         return '\\text{Error has occurred!}'
 

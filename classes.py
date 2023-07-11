@@ -8,7 +8,7 @@ from typing import *
 # todo: (-1) ^ x, -1 ^ x, -(1 ^ x); fix how input deals with negative signs with non-digits
 # todo: 0 ^ Func and 0 ^ f(x)
 # todo: sort by argument first for (trig) functions?
-# todo: e ^ ln x = x simplification
+# todo: e ^ ln x = x simplification; a ^ (... * loga x * ...) = x ^ ... simplification (an O(n) algorithm that looks through all nodes in the exponent?)
 
 
 class Expr:
@@ -314,6 +314,8 @@ class Multiply(BinOp):
             left_latex = '( ' + self.left.get_latex() + ') '
         else:
             left_latex = self.left.get_latex()
+        if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
+            return '\\displaystyle\\frac{ ' + left_latex + '}{ ' + self.right.left.get_latex() + '} '
         if isinstance(self.right, Plus):
             right_latex = '( ' + self.right.get_latex() + ') '
         else:
@@ -448,8 +450,7 @@ class Multiply(BinOp):
         i = 0
         fractions = None
         if get_arrangement_type(lst[i])[0] == 'Power':  # Is it a Power?
-            power_tree = Multiply(Const(1), lst[0])
-            i += 1
+            power_tree = Const(1)
             # Create power_tree; filter out any Pows with negative exponents
             power_tree, i, end_of_power, fractions = get_power_tree(i, lst, power_tree, fractions)
 
@@ -461,8 +462,7 @@ class Multiply(BinOp):
                 else:
                     return power_tree
             elif get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:  # Is it a "Rest"?
-                rest_tree = lst[i]
-                i += 1
+                rest_tree = Const(1)
                 # Create rest_tree; filter out any Pows with negative exponents
                 rest_tree, i, fractions = get_rest_tree(i, lst, rest_tree, fractions)
 
@@ -478,8 +478,7 @@ class Multiply(BinOp):
                     else:
                         return power_tree
                 elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
-                    non_digit_tree = lst[i]
-                    i += 1
+                    non_digit_tree = Const(1)
                     # Create non_digit_tree
                     non_digit_tree, i, fractions = get_non_digit_tree(i, lst, non_digit_tree, fractions)
                     if i == len(lst):
@@ -488,8 +487,7 @@ class Multiply(BinOp):
                         else:
                             return Multiply(non_digit_tree, power_tree)
                     else:  # Must be a Digit
-                        digit_tree = lst[i]
-                        i += 1
+                        digit_tree = Const(1)
                         # Create digit_tree
                         digit_tree = get_digit_tree(i, lst, digit_tree)
                         if fractions:
@@ -498,8 +496,7 @@ class Multiply(BinOp):
                         else:
                             return Multiply(Multiply(digit_tree, non_digit_tree), power_tree)
                 else:  # Must be a Digit
-                    digit_tree = lst[i]
-                    i += 1
+                    digit_tree = Const(1)
                     # Create digit_tree
                     digit_tree = get_digit_tree(i, lst, digit_tree)
                     if fractions:
@@ -508,8 +505,7 @@ class Multiply(BinOp):
                     else:
                         return Multiply(digit_tree, Multiply(rest_tree, power_tree))
             elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
-                non_digit_tree = lst[i]
-                i += 1
+                non_digit_tree = Const(1)
                 # Create non_digit_tree
                 non_digit_tree, i, fractions = get_non_digit_tree(i, lst, non_digit_tree, fractions)
                 if i == len(lst):
@@ -518,8 +514,7 @@ class Multiply(BinOp):
                     else:
                         return Multiply(non_digit_tree, power_tree)
                 else:  # Must be a Digit
-                    digit_tree = lst[i]
-                    i += 1
+                    digit_tree = Const(1)
                     # Create digit_tree
                     digit_tree = get_digit_tree(i, lst, digit_tree)
                     if fractions:
@@ -528,8 +523,7 @@ class Multiply(BinOp):
                     else:
                         return Multiply(Multiply(digit_tree, non_digit_tree), power_tree)
             else:  # Must be a digit tree
-                digit_tree = lst[i]
-                i += 1
+                digit_tree = Const(1)
                 # Create digit_tree
                 digit_tree = get_digit_tree(i, lst, digit_tree)
                 if fractions:
@@ -537,8 +531,7 @@ class Multiply(BinOp):
                 else:
                     return Multiply(digit_tree, power_tree)
         elif get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:  # Is it a Rest?
-            rest_tree = lst[i]
-            i += 1
+            rest_tree = Const(1)
             # Create rest_tree; filter out any Pows with negative exponents
             rest_tree, i, fractions = get_rest_tree(i, lst, rest_tree, fractions)
             if i == len(lst):
@@ -547,8 +540,7 @@ class Multiply(BinOp):
                 else:
                     return rest_tree
             elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
-                non_digit_tree = lst[i]
-                i += 1
+                non_digit_tree = Const(1)
                 # Create non_digit_tree
                 non_digit_tree, i, fractions = get_non_digit_tree(i, lst, non_digit_tree, fractions)
                 if i == len(lst):
@@ -557,8 +549,7 @@ class Multiply(BinOp):
                     else:
                         return Multiply(non_digit_tree, rest_tree)
                 else:  # Must be a Digit
-                    digit_tree = lst[i]
-                    i += 1
+                    digit_tree = Const(1)
                     # Create digit_tree
                     digit_tree = get_digit_tree(i, lst, digit_tree)
                     if fractions:
@@ -567,8 +558,7 @@ class Multiply(BinOp):
                     else:
                         return Multiply(Multiply(digit_tree, non_digit_tree), rest_tree)
             else:  # Must be a Digit
-                digit_tree = lst[i]
-                i += 1
+                digit_tree = Const(1)
                 # Create digit_tree
                 digit_tree = get_digit_tree(i, lst, digit_tree)
                 if fractions:
@@ -576,8 +566,7 @@ class Multiply(BinOp):
                 else:
                     return Multiply(digit_tree, rest_tree)
         elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
-            non_digit_tree = lst[i]
-            i += 1
+            non_digit_tree = Const(1)
             # Create non_digit_tree
             non_digit_tree, i, fractions = get_non_digit_tree(i, lst, non_digit_tree, fractions)
             if i == len(lst):
@@ -586,8 +575,7 @@ class Multiply(BinOp):
                 else:
                     return non_digit_tree
             else:  # Must be a digit
-                digit_tree = lst[i]
-                i += 1
+                digit_tree = Const(1)
                 # Create digit_tree
                 digit_tree = get_digit_tree(i, lst, digit_tree)
                 if fractions:
@@ -595,8 +583,7 @@ class Multiply(BinOp):
                 else:
                     return Multiply(digit_tree, non_digit_tree)
         else:  # Must be a Digit
-            digit_tree = lst[i]
-            i += 1
+            digit_tree = Const(1)
             # Create digit_tree
             digit_tree = get_digit_tree(i, lst, digit_tree)
             return digit_tree
@@ -638,10 +625,12 @@ def get_power_tree(i: int, lst: list, power_tree: Expr, fractions: Optional[Expr
                     fractions = Pow(lst[i].left, abs_of_exponent)
                 else:
                     fractions = Multiply(fractions, Pow(lst[i].left, abs_of_exponent))
+            else:
+                power_tree = Multiply(power_tree, lst[i])
         else:
             power_tree = Multiply(power_tree, lst[i])
-            if i == 1:
-                end_of_power = power_tree
+        if i == 1:
+            end_of_power = power_tree
         i += 1
     return (power_tree, i, end_of_power, fractions)
 
@@ -659,6 +648,8 @@ def get_rest_tree(i: int, lst: list, rest_tree: Expr, fractions: Optional[Expr])
                     fractions = Pow(lst[i].left, abs_of_exponent)
                 else:
                     fractions = Multiply(fractions, Pow(lst[i].left, abs_of_exponent))
+            else:
+                rest_tree = Multiply(rest_tree, lst[i])
         else:
             rest_tree = Multiply(rest_tree, lst[i])
         i += 1
@@ -678,6 +669,8 @@ def get_non_digit_tree(i: int, lst: list, non_digit_tree: Expr, fractions: Optio
                     fractions = Pow(lst[i].left, abs_of_exponent)
                 else:
                     fractions = Multiply(fractions, Pow(lst[i].left, abs_of_exponent))
+            else:
+                non_digit_tree = Multiply(non_digit_tree, lst[i])
         else:
             non_digit_tree = Multiply(non_digit_tree, lst[i])
         i += 1
@@ -700,15 +693,14 @@ def is_minus(expr: Expr) -> tuple[bool, Expr]:  # todo: test
     """
     if isinstance(expr, Const) and (isinstance(expr.name, int) or isinstance(expr.name, float)) and expr.name < 0:
         return (True, Const(-expr.name))
-    elif isinstance(expr, Multiply):
+    if isinstance(expr, Multiply):
         left_is_minus, left_abs_value = is_minus(expr.left)
         right_is_minus, right_abs_value = is_minus(expr.right)
         if left_is_minus and not right_is_minus:
             return (True, Multiply(left_abs_value, right_abs_value))
         elif right_is_minus and not left_is_minus:
             return (True, Multiply(left_abs_value, right_abs_value))
-    else:
-        return (False, expr)
+    return (False, expr)
 
 
 class Const(Num):
@@ -757,13 +749,19 @@ class Pow(BinOp):
         return '( ' + str(self.left) + ') ^ ( ' + str(self.right) + ') '
 
     def get_latex(self) -> str:
+        if isinstance(self.right, Const) and self.right.name == -1:
+            return '\\displaystyle\\frac{1}{ ' + self.left.get_latex() + '} '
         if isinstance(self.left, Func):
             return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '( ' + self.left.arg.get_latex() + ') '
         if isinstance(self.left, Plus) or isinstance(self.left, Multiply) or isinstance(self.left, Pow):
             left_latex = '( ' + self.left.get_latex() + ') '
         else:
             left_latex = self.left.get_latex()
-        return '{ ' + left_latex + '} ' + '^' + '{ ' + self.right.get_latex() + '} '
+        minus, abs_val = is_minus(self.right)
+        if minus:
+            return '\\displaystyle\\frac{1}{ ' + left_latex + '^ ' + abs_val.get_latex() + '} '
+        else:
+            return '{ ' + left_latex + '} ' + '^' + '{ ' + self.right.get_latex() + '} '
 
     def differentiate(self, respect_to: str) -> Expr:
         if isinstance(self.left, Const) and isinstance(self.right, Const):
@@ -791,10 +789,13 @@ class Pow(BinOp):
         return Pow(Const('e'), Multiply(self.right, Log(Const('e'), self.left))).differentiate(respect_to)
 
     def simplify(self) -> Expr:
-        if self.right == Const(1):
+        if isinstance(self.right, Const) and self.right.name == 1:
             return self.left.simplify()
 
         return Pow(self.left.simplify(), self.right.simplify())
+
+    def rearrange(self) -> Expr:
+        return Pow(self.left.rearrange(), self.right.rearrange())
 
 
 class Var(Num):
