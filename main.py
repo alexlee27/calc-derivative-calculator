@@ -229,15 +229,22 @@ def differentiate(input_text: str, variable: str = 'x') -> str:
     returns LaTeX code of the differentiated expression.
     """
     expr = string_to_expr(input_text, {variable})
+    simplified = None
     if expr is not None:
         differentiated = expr.differentiate(variable).rearrange()
-        prev = differentiated
-        simplified = prev.simplify()
-        while str(simplified) != str(prev):
-            print(prev)
-            prev, simplified = simplified, simplified.simplify()
-        print(simplified)
-        visualization_runner(simplified)
+        prev1 = differentiated
+        rearranged = prev1.rearrange()
+        while str(rearranged) != str(prev1):
+            prev2 = rearranged
+            simplified = prev2.simplify()
+            while str(simplified) != str(prev2):
+                # print(prev2)
+                prev2, simplified = simplified, simplified.simplify()
+            # print(simplified)
+            prev1, rearranged = rearranged, simplified.rearrange()
+            print(rearranged)
+        # todo: toggle below for graph
+        # visualization_runner(simplified)
         return simplified.get_latex()
     else:
         return '\\text{Error has occurred!}'

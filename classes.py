@@ -6,11 +6,14 @@ from typing import *
 # x ^ e, x ^ pi, x ^ x works
 # Func ^ f(x) (e.g. ( ln ( e ) ) ^ x ) works
 # Func ^ Func (e.g. ( cos ( 1 ) ) ^ sin ( 1 ) ) works
+# todo: filter fractions in Multiply objects
 # todo: (-1) ^ x, -1 ^ x, -(1 ^ x); fix how input deals with negative signs with non-digits
 # todo: 0 ^ Func and 0 ^ f(x)
 # sorted by argument first for (trig) functions
 # todo: e ^ ln x = x simplification; a ^ (... * loga x * ...) = x ^ ... simplification (an O(n) algorithm that looks through all nodes in the exponent?)
 # todo: logx ^ x????
+# todo: use euclidean gcd algorithm for fraction simplification
+# todo: create new method call 'trig_simplify'
 
 
 class Expr:
@@ -96,6 +99,8 @@ class Expr:
                 elif self_coefficient > other_coefficient:
                     return False
                 # At this point, self_coefficient == other_coefficient:
+            elif self_type == 'Other':
+                ...  # todo: implement
             elif self_type == 'Non-digit':
                 print('inside __lt__')
                 self_list = process_to_list(self_base)
@@ -139,6 +144,10 @@ class Expr:
                         return False
                     i += 1
             elif self_type == 'Digit':
+                if isinstance(self, Pow) and isinstance(other, Const):
+                    return True
+                if isinstance(self, Const) and isinstance(other, Pow):
+                    return False
                 if isinstance(self_base, Const) and isinstance(other_base, Const):
                     return self_base.name < other_base.name
             return False
@@ -365,11 +374,16 @@ class Multiply(BinOp):
                 and not isinstance(self.right.name, str):
             return Const(self.left.name * self.right.name)
 
-        # Power * Power with same bases
-        if isinstance(self.left, Pow) and isinstance(self.right, Pow) \
-                and str(self.left.left) == str(self.right.left):
-            return Pow(self.left.left.simplify(),
-                       Plus(self.left.right.simplify(), self.right.right.simplify()).simplify())
+        # Pow * Pow
+        if isinstance(self.left, Pow) and isinstance(self.right, Pow):
+            # Same bases
+            if str(self.left.left) == str(self.right.left):
+                return Pow(self.left.left.simplify(),
+                           Plus(self.left.right.simplify(), self.right.right.simplify()).simplify())
+            # Same exponents
+            if str(self.left.right) == str(self.right.right):
+                return Pow(Multiply(self.left.left.simplify(), self.right.left.simplify()).simplify(),
+                           self.left.right.simplify())
 
         # (base ^ exp) * base
         if isinstance(self.left, Pow) and str(self.left.left) == str(self.right):
@@ -809,8 +823,11 @@ class Pow(BinOp):
                 return Const(1)
 
         if isinstance(self.left, Const) and isinstance(self.left.name, int) and \
-            isinstance(self.right, Const) and isinstance(self.right.name, int):
-            return Const(self.left.name ** self.right.name)
+                isinstance(self.right, Const) and isinstance(self.right.name, int):
+            if self.right.name >= 0:
+                return Const((self.left.name) ** self.right.name)
+            else:
+                return Pow(Const((self.left.name) ** (-self.right.name)), Const(-1))
 
         return Pow(self.left.simplify(), self.right.simplify())
 
