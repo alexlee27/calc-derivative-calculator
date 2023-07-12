@@ -125,7 +125,7 @@ class Expr:
                                 return True
                             if self_list[i][1] < other_list[i][1]:
                                 print('1st one has higher priority')
-                                return True
+                                return False
                         if not isinstance(self_list[i][1], str) and isinstance(other_list[i][1], str):
                             # Alphabets take precedence over digits
                             print('2nd one has higher priority')
@@ -371,10 +371,15 @@ class Multiply(BinOp):
             return Pow(self.left.left.simplify(),
                        Plus(self.left.right.simplify(), self.right.right.simplify()).simplify())
 
-        # (base ^ exp_1) * base
+        # (base ^ exp) * base
         if isinstance(self.left, Pow) and str(self.left.left) == str(self.right):
-            return Pow(self.left.left.simplify(),
+            return Pow(self.right.simplify(),
                        Plus(self.left.right.simplify(), Const(1)).simplify())
+
+        # base * (base ^ exp)
+        if isinstance(self.right, Pow) and str(self.right.left) == str(self.left):
+            return Pow(self.left.simplify(),
+                       Plus(self.right.right.simplify(), Const(1)).simplify())
 
         # Multiply * something else
         if isinstance(self.left, Multiply) and not isinstance(self.right, Multiply):
@@ -797,8 +802,15 @@ class Pow(BinOp):
         return Pow(Const('e'), Multiply(self.right, Log(Const('e'), self.left))).differentiate(respect_to)
 
     def simplify(self) -> Expr:
-        if isinstance(self.right, Const) and self.right.name == 1:
-            return self.left.simplify()
+        if isinstance(self.right, Const):
+            if self.right.name == 1:
+                return self.left.simplify()
+            if self.right.name == 0:
+                return Const(1)
+
+        if isinstance(self.left, Const) and isinstance(self.left.name, int) and \
+            isinstance(self.right, Const) and isinstance(self.right.name, int):
+            return Const(self.left.name ** self.right.name)
 
         return Pow(self.left.simplify(), self.right.simplify())
 
@@ -908,6 +920,14 @@ class Trig(Func):
                             )
 
     def simplify(self) -> Expr:
+        if self.name == 'tan':
+            Multiply(Trig('sin', self.arg.simplify()), Pow(Trig('cos', self.arg.simplify()), Const(-1)))
+        if self.name == 'sec':
+            return Multiply(Const(1), Pow(Trig('cos', self.arg.simplify()), Const(-1)))
+        if self.name == 'csc':
+            return Multiply(Const(1), Pow(Trig('sin', self.arg.simplify()), Const(-1)))
+        if self.name == 'cot':
+            return Multiply(Const(1), Pow(Trig('tan', self.arg.simplify()), Const(-1)))
         return Trig(self.name, self.arg.simplify())
 
 
@@ -1023,7 +1043,8 @@ def get_arrangement_type(expr: Expr) -> tuple:  # TODO: TEST
         if isinstance(expr.left, Const):
             if get_arrangement_type(expr.right)[0] in {'Non-digit', 'Digit'}:
                 if isinstance(expr.left.name, str):
-                    return ('Non-digit', expr.left, expr.right, Const(1), None, None)  # 16, 17
+                    # Note: We consider the entirety of expr to be the base here; expr.left is NOT the base
+                    return ('Non-digit', expr, Const(1), Const(1), None, None)  # 16, 17
                 if isinstance(expr.left.name, int) or isinstance(expr.left.name, float):
                     return ('Digit', expr.left, expr.right, Const(1), None, None)  # 19
 
