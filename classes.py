@@ -1,13 +1,14 @@
 """Classes for mathematical expressions"""
 from typing import *
 
+
 # todo: run a bunch of test cases for Plus.simplify, Plus.rearrange, Multiply.simplify, and Multiply.rearrange
 # x ^ e, x ^ pi, x ^ x works
 # Func ^ f(x) (e.g. ( ln ( e ) ) ^ x ) works
 # Func ^ Func (e.g. ( cos ( 1 ) ) ^ sin ( 1 ) ) works
 # todo: (-1) ^ x, -1 ^ x, -(1 ^ x); fix how input deals with negative signs with non-digits
 # todo: 0 ^ Func and 0 ^ f(x)
-# todo: sort by argument first for (trig) functions?
+# sorted by argument first for (trig) functions
 # todo: e ^ ln x = x simplification; a ^ (... * loga x * ...) = x ^ ... simplification (an O(n) algorithm that looks through all nodes in the exponent?)
 # todo: logx ^ x????
 
@@ -38,8 +39,10 @@ class Expr:
     def __lt__(self, other) -> bool:
         """Return whether self is less (lower priority) than other."""
         type_to_priority = {'Power': 6, 'Exponential': 5, 'Function': 4, 'Other': 3, 'Non-digit': 2, 'Digit': 1}
-        self_type, self_base, self_exponent, self_coefficient, self_function_name = get_arrangement_type(self)
-        other_type, other_base, other_exponent, other_coefficient, other_function_name = get_arrangement_type(other)
+        self_type, self_base, self_exponent, self_coefficient, self_function_name, self_function_arg = get_arrangement_type(
+            self)
+        other_type, other_base, other_exponent, other_coefficient, other_function_name, other_function_arg = get_arrangement_type(
+            other)
         if type_to_priority[self_type] < type_to_priority[other_type]:
             return True
         elif type_to_priority[self_type] > type_to_priority[other_type]:
@@ -73,7 +76,12 @@ class Expr:
                     return False
                 # At this point, self_coefficient == other_coefficient:
             elif self_type == 'Function':  # todo: sort by argument first?
-                if self_function_name < other_function_name:
+                if self_function_arg < other_function_arg:
+                    return True
+                elif self_function_arg > other_function_arg:
+                    return False
+                # At this point, self_function_arg is same object as other_function_arg
+                elif self_function_name < other_function_name:
                     return True
                 elif self_function_name > other_function_name:
                     return False
@@ -334,6 +342,10 @@ class Multiply(BinOp):
                     Multiply(self.left, self.right.differentiate(respect_to)))
 
     def simplify(self) -> Expr:
+        # Preventing simplification of 1 * (something ^ -1) into (something ^ -1)
+        if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
+            if isinstance(self.left, Const) and self.left.name == 1:
+                return self
         if isinstance(self.left, Const):
             if self.left.name == 1:
                 return self.right.simplify()
@@ -748,7 +760,8 @@ class Pow(BinOp):
             if self.left.base.name == 'e':
                 return '{ \\ln } ' + '^' + '{ ' + self.right.get_latex() + '} ' + '( ' + self.left.arg.get_latex() + ') '
             return '{\\log_{ ' + self.left.base.get_latex() + '} } ' + '^' + '{ ' + self.right.get_latex() + '} ' + '( ' + self.left.arg.get_latex() + ') '
-        if isinstance(self.left, Plus) or isinstance(self.left, Multiply) or isinstance(self.left, Pow) or is_minus(self.left)[0]:
+        if isinstance(self.left, Plus) or isinstance(self.left, Multiply) or isinstance(self.left, Pow) or \
+                is_minus(self.left)[0]:
             left_latex = '( ' + self.left.get_latex() + ') '
         else:
             left_latex = self.left.get_latex()
@@ -845,39 +858,40 @@ class Trig(Func):
 
     def differentiate(self, respect_to: str) -> Expr:
         if self.name == 'sin':
-            return Multiply(Trig('cos', self.arg),
-                            self.arg.differentiate(respect_to)
-                            )
+            return Multiply(Trig('cos', self.arg), self.arg.differentiate(respect_to))
         if self.name == 'cos':
-            return Multiply(Const(-1),
-                            Multiply(Trig('sin', self.arg),
-                                     self.arg.differentiate(respect_to)
-                                     )
-                            )
+            return Multiply(Multiply(Const(-1), Trig('sin', self.arg)), self.arg.differentiate(respect_to))
         if self.name == 'tan':
-            return Multiply(Pow(Trig('sec', self.arg), Const(2)),
-                            self.arg.differentiate(respect_to)
-                            )
+            return Multiply(Pow(Trig('cos', self.arg), Const(-2)), self.arg.differentiate(respect_to))
+            # return Multiply(Pow(Trig('sec', self.arg), Const(2)),
+            #                 self.arg.differentiate(respect_to)
+            #                 )
         if self.name == 'sec':
-            return Multiply(Trig('sec', self.arg),
-                            Multiply(Trig('tan', self.arg),
-                                     self.arg.differentiate(respect_to)
-                                     )
-                            )
+            return Multiply(Multiply(Trig('sin', self.arg), Pow(Trig('cos', self.arg), Const(-2))),
+                            self.arg.differentiate(respect_to))
+            # return Multiply(Trig('sec', self.arg),
+            #                 Multiply(Trig('tan', self.arg),
+            #                          self.arg.differentiate(respect_to)
+            #                          )
+            #                 )
         if self.name == 'csc':
-            return Multiply(Const(-1),
-                            Multiply(Trig('csc', Var('x')),
-                                     Multiply(Trig('cot', Var('x')),
-                                              self.arg.differentiate(respect_to)
-                                              )
-                                     )
-                            )
+            return Multiply(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))), Trig('cos', self.arg)),
+                            self.arg.differentiate(respect_to))
+            # return Multiply(Const(-1),
+            #                 Multiply(Trig('csc', Var('x')),
+            #                          Multiply(Trig('cot', Var('x')),
+            #                                   self.arg.differentiate(respect_to)
+            #                                   )
+            #                          )
+            #                 )
         if self.name == 'cot':
-            return Multiply(Const(-1),
-                            Multiply(Pow(Trig('csc', self.arg), Const(2)),
-                                     self.arg.differentiate(respect_to)
-                                     )
-                            )
+            return Multiply(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))), Trig('cos', self.arg)),
+                            self.arg.differentiate(respect_to))
+            # return Multiply(Const(-1),
+            #                 Multiply(Pow(Trig('csc', self.arg), Const(2)),
+            #                          self.arg.differentiate(respect_to)
+            #                          )
+            #                 )
 
         if self.name == 'arcsin':
             return Multiply(self.arg.differentiate(respect_to),
@@ -972,58 +986,58 @@ def process_to_list(obj: Expr) -> list[tuple[str, int | float | str]]:
 
 def get_arrangement_type(expr: Expr) -> tuple:  # TODO: TEST
     """Returns a tuple in the form of:
-    (type, base, exponent, coefficient, function_name)
+    (type, base, exponent, coefficient, function_name, function_argument)
     """
     if isinstance(expr, Var):
-        return ('Power', expr, Const(1), Const(1), None)  # 4
+        return ('Power', expr, Const(1), Const(1), None, None)  # 4
     if isinstance(expr, Func):
-        return ('Function', expr, Const(1), Const(1), expr.name)  # 10
+        return ('Function', expr, Const(1), Const(1), expr.name, expr.arg)  # 10
     if isinstance(expr, Const) and isinstance(expr.name, str):
-        return ('Non-digit', expr, Const(1), Const(1), None)  # 13
+        return ('Non-digit', expr, Const(1), Const(1), None, None)  # 13
     if isinstance(expr, Const) and (isinstance(expr.name, int) or isinstance(expr.name, float)):
-        return ('Digit', expr, Const(1), Const(1), None)  # 18
+        return ('Digit', expr, Const(1), Const(1), None, None)  # 18
     if isinstance(expr, Multiply):
         expr_left_type = get_arrangement_type(expr.left)[0]
         if expr_left_type == 'Non-digit':
             if get_arrangement_type(expr.right)[0] == 'Non-digit':
-                return ('Non-digit', expr, Const(1), Const(1), None)  # 15
+                return ('Non-digit', expr, Const(1), Const(1), None, None)  # 15
         if expr_left_type == 'Digit':
             if get_arrangement_type(expr.right)[0] == 'Non-digit':
-                return ('Non-digit', expr.right, Const(1), expr.left, None)  # 14
+                return ('Non-digit', expr.right, Const(1), expr.left, None, None)  # 14
         if expr_left_type in {'Non-digit', 'Digit'}:
             if isinstance(expr.right, Pow) and isinstance(expr.right.left, Var) \
                     and get_arrangement_type(expr.right.right)[0] in {'Non-digit', 'Digit'}:
-                return ('Power', expr.right.left, expr.right.right, expr.left, None)  # 1
+                return ('Power', expr.right.left, expr.right.right, expr.left, None, None)  # 1
             if isinstance(expr.right, Var):
-                return ('Power', expr.right, Const(1), expr.left, None)  # 3
-            if isinstance(expr.right, Pow) and get_arrangement_type(expr.right.left)[0] in {'Non-digit',
-                                                                                              'Digit'} \
+                return ('Power', expr.right, Const(1), expr.left, None, None)  # 3
+            if isinstance(expr.right, Pow) and get_arrangement_type(expr.right.left)[0] in {'Non-digit', 'Digit'} \
                     and get_arrangement_type(expr.right.right)[0] == 'Power':
-                return ('Exponential', expr.right.left, expr.right.right, expr.left, None)  # 5, 8
+                return ('Exponential', expr.right.left, expr.right.right, expr.left, None, None)  # 5, 8
             if isinstance(expr.right, Func):
-                return ('Function', expr, Const(1), expr.left, expr.right.name)  # 9
+                return ('Function', expr, Const(1), expr.left, expr.right.name, expr.right.arg)  # 9
             if isinstance(expr.right, Pow) and isinstance(expr.right.left, Func) \
                     and get_arrangement_type(expr.right.right)[0] in {'Non-digit', 'Digit'}:
-                return ('Function', expr.right.left, expr.right.right, expr.left, expr.right.left.name)  # 11
+                return ('Function', expr.right.left, expr.right.right, expr.left, expr.right.left.name,
+                        expr.right.left.arg)  # 11
     if isinstance(expr, Pow):
         if isinstance(expr.left, Const):
             if get_arrangement_type(expr.right)[0] in {'Non-digit', 'Digit'}:
                 if isinstance(expr.left.name, str):
-                    return ('Non-digit', expr.left, expr.right, Const(1), None)  # 16, 17
+                    return ('Non-digit', expr.left, expr.right, Const(1), None, None)  # 16, 17
                 if isinstance(expr.left.name, int) or isinstance(expr.left.name, float):
-                    return ('Digit', expr.left, expr.right, Const(1), None)  # 19
+                    return ('Digit', expr.left, expr.right, Const(1), None, None)  # 19
 
         expr_left_type = get_arrangement_type(expr.left)[0]
         if expr_left_type in {'Non-digit', 'Digit'}:
             if get_arrangement_type(expr.right)[0] == 'Power':
-                return ('Exponential', expr.left, expr.right, Const(1), None)  # 6, 7
+                return ('Exponential', expr.left, expr.right, Const(1), None, None)  # 6, 7
         if get_arrangement_type(expr.right)[0] in {'Non-digit', 'Digit'}:
             if isinstance(expr.left, Var):
-                return ('Power', expr.left, expr.right, Const(1), None)  # 2
+                return ('Power', expr.left, expr.right, Const(1), None, None)  # 2
             if isinstance(expr.left, Func):
-                return ('Function', expr.left, expr.right, Const(1), expr.left.name)  # 12
+                return ('Function', expr.left, expr.right, Const(1), expr.left.name, expr.left.arg)  # 12
 
-    return ('Other', expr, Const(1), Const(1), None)
+    return ('Other', expr, Const(1), Const(1), None, None)
 
 
 class LogZeroError(Exception):
