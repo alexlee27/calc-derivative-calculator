@@ -354,7 +354,7 @@ class Multiply(BinOp):
         # Preventing simplification of 1 * (something ^ -1) into (something ^ -1)
         if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
             if isinstance(self.left, Const) and self.left.name == 1:
-                return self
+                return Multiply(Const(1), Pow(self.right.left.simplify(), Const(-1)))
         if isinstance(self.left, Const):
             if self.left.name == 1:
                 return self.right.simplify()
@@ -395,15 +395,20 @@ class Multiply(BinOp):
             return Pow(self.left.simplify(),
                        Plus(self.right.right.simplify(), Const(1)).simplify())
 
-        # Multiply * something else
+        #       *
+        #      / \
+        #     *   A
+        #    / \
+        #  ...  A      (where A is an arbitrary arrangement type)
         if isinstance(self.left, Multiply) and not isinstance(self.right, Multiply):
-            left_simplified = self.left.simplify()
-            if str(left_simplified) != str(self.left):
-                return Multiply(left_simplified, self.right).simplify()
-            else:
-                lr_and_r_simplified = Multiply(self.left.right, self.right).simplify()
-                if str(lr_and_r_simplified) != str(Multiply(self.left.right, self.right)):
-                    return Multiply(self.left.left, lr_and_r_simplified).simplify()
+            if get_arrangement_type(self.left.right)[0] == get_arrangement_type(self.right)[0]:
+                left_simplified = self.left.simplify()
+                if str(left_simplified) != str(self.left):
+                    return Multiply(left_simplified, self.right.simplify()).simplify()
+                else:
+                    lr_and_r_simplified = Multiply(self.left.right, self.right).simplify()
+                    if str(lr_and_r_simplified) != str(Multiply(self.left.right, self.right)):
+                        return Multiply(self.left.left.simplify(), lr_and_r_simplified).simplify()
 
         # # <some_type> * (<some_type> * Expr)
         # if isinstance(self.right, Multiply) and type(self.left) == type(self.right.left):
@@ -482,7 +487,7 @@ class Multiply(BinOp):
         i = 0
         if get_arrangement_type(lst[i])[0] == 'Power':  # Is it a Power?
             power_tree = Const(1)
-            # Create power_tree; filter out any Pows with negative exponents
+            # Create power_tree
             power_tree, i, end_of_power = get_power_tree(i, lst, power_tree)
 
             if i == len(lst) and isinstance(end_of_power.left, Multiply):  # All items were Power objects
@@ -494,7 +499,7 @@ class Multiply(BinOp):
                     return power_tree
             elif get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:  # Is it a "Rest"?
                 rest_tree = Const(1)
-                # Create rest_tree; filter out any Pows with negative exponents
+                # Create rest_tree
                 rest_tree, i = get_rest_tree(i, lst, rest_tree)
 
                 # Attach rest_tree to power_tree
@@ -560,7 +565,7 @@ class Multiply(BinOp):
                 return Multiply(digit_tree, power_tree)
         elif get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:  # Is it a Rest?
             rest_tree = Const(1)
-            # Create rest_tree; filter out any Pows with negative exponents
+            # Create rest_tree
             rest_tree, i = get_rest_tree(i, lst, rest_tree)
             if i == len(lst):
                 # if fractions:
@@ -938,7 +943,7 @@ class Trig(Func):
 
     def simplify(self) -> Expr:
         if self.name == 'tan':
-            Multiply(Trig('sin', self.arg.simplify()), Pow(Trig('cos', self.arg.simplify()), Const(-1)))
+            return Multiply(Trig('sin', self.arg.simplify()), Pow(Trig('cos', self.arg.simplify()), Const(-1)))
         if self.name == 'sec':
             return Multiply(Const(1), Pow(Trig('cos', self.arg.simplify()), Const(-1)))
         if self.name == 'csc':

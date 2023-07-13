@@ -229,23 +229,25 @@ def differentiate(input_text: str, variable: str = 'x') -> str:
     returns LaTeX code of the differentiated expression.
     """
     expr = string_to_expr(input_text, {variable})
-    simplified = None
     if expr is not None:
-        differentiated = expr.differentiate(variable).rearrange()
-        prev1 = differentiated
-        rearranged = prev1.rearrange()
-        while str(rearranged) != str(prev1):
-            prev2 = rearranged
-            simplified = prev2.simplify()
-            while str(simplified) != str(prev2):
+        differentiated = expr.differentiate(variable)
+        prev1 = None
+        curr = differentiated
+        while str(curr) != str(prev1):
+            prev1, curr = curr, curr.rearrange()
+            print('prev1: ' + str(prev1))
+            print('curr : ' + str(curr))
+
+            prev2 = None
+            while str(curr) != str(prev2):
                 # print(prev2)
-                prev2, simplified = simplified, simplified.simplify()
+                prev2, curr = curr, curr.simplify()
+                print('prev2: ' + str(prev2))
+                print('curr : ' + str(curr))
             # print(simplified)
-            prev1, rearranged = rearranged, simplified.rearrange()
-            print(rearranged)
         # todo: toggle below for graph
-        # visualization_runner(simplified)
-        return simplified.get_latex()
+        visualization_runner(curr)
+        return curr.get_latex()
     else:
         return '\\text{Error has occurred!}'
 
@@ -262,26 +264,27 @@ def tester() -> None:
         print(expr)
         if expr is not None:
             prompt = input('\'s\' for simplifying, \'r\' for rearranging')
-            if prompt.lower() == 's':
-                prev = expr
-                simplified = prev.simplify()
-                prompt = input('continue? n to stop')
-                while prompt != 'n':
+            while prompt.lower() in {'s', 'r'}:
+                if prompt.lower() == 's':
+                    prev = expr
+                    simplified = prev.simplify()
                     print(prev)
                     prev, simplified = simplified, simplified.simplify()
-                    prompt = input('continue? n to stop')
-                print(simplified)
-            while prompt.lower() == 'r':
-                # print('1')
-                prev = expr
-                rearranged = prev.rearrange()
-                # while str(rearranged) != str(prev):
-                #     print(prev)
-                #     prev, rearranged = rearranged, rearranged.rearrange()
-                # print('2')
-                print(rearranged)
-                visualization_runner(rearranged)
-                prompt = input('\'r\' for rearranging')
+                    print(simplified)
+                    visualization_runner(simplified)
+                    expr = simplified
+                if prompt.lower() == 'r':
+                    # print('1')
+                    prev = expr
+                    rearranged = prev.rearrange()
+                    # while str(rearranged) != str(prev):
+                    #     print(prev)
+                    #     prev, rearranged = rearranged, rearranged.rearrange()
+                    # print('2')
+                    print(rearranged)
+                    visualization_runner(rearranged)
+                    expr = rearranged
+                prompt = input('\'s\' for simplifying, \'r\' for rearranging')
     print('Program is done')
 
 
