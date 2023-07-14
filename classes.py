@@ -10,10 +10,15 @@ from typing import *
 # todo: (-1) ^ x, -1 ^ x, -(1 ^ x); fix how input deals with negative signs with non-digits
 # todo: 0 ^ Func and 0 ^ f(x)
 # sorted by argument first for (trig) functions
-# todo: e ^ ln x = x simplification; a ^ (... * loga x * ...) = x ^ ... simplification (an O(n) algorithm that looks through all nodes in the exponent?)
-# todo: logx ^ x????
+# implemented e ^ ln x = x simplification; a ^ (... * loga x * ...) = x ^ ... simplification (an O(n) algorithm that looks through all nodes in the exponent?)
+# todo: logx ( x )????
 # todo: use euclidean gcd algorithm for fraction simplification
 # todo: create new method call 'trig_simplify'
+# todo: make it so non-constants can be used in logarithm base
+# todo: implement logarithm rules
+# todo: implement something + ( -1 * something ) = 0 simplifivation
+# todo: a ^ (b + c) = a^b * a^c (where b + c can't be simplified)
+
 
 
 class Expr:
@@ -225,6 +230,17 @@ class Plus(BinOp):
         return '( ' + str(self.left) + '+ ' + str(self.right) + ') '
 
     def get_latex(self) -> str:
+        # self.right is a negative digit
+        if isinstance(self.right, Const) and (isinstance(self.right.name, int) or isinstance(self.right.name, float)) \
+                and self.right.name < 0:
+            return self.left.get_latex() + ' ' + self.right.get_latex()
+
+        # whatever + (negative digit * whatever)
+        if isinstance(self.right, Multiply) and isinstance(self.right.left, Const) \
+                and (isinstance(self.right.left.name, int) or isinstance(self.right.left.name, float)) \
+                and self.right.left.name < 0:
+            return self.left.get_latex() + ' ' + self.right.get_latex()
+
         return self.left.get_latex() + '+ ' + self.right.get_latex()
 
     def differentiate(self, respect_to: str) -> Expr:
@@ -329,15 +345,24 @@ class Multiply(BinOp):
 
     def get_latex(self) -> str:
         if isinstance(self.left, Plus):
-            left_latex = '( ' + self.left.get_latex() + ') '
+            left_latex = '\\left( ' + self.left.get_latex() + '\\right) '
         else:
             left_latex = self.left.get_latex()
         if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
             return '\\displaystyle\\frac{ ' + left_latex + '}{ ' + self.right.left.get_latex() + '} '
         if isinstance(self.right, Plus):
-            right_latex = '( ' + self.right.get_latex() + ') '
+            right_latex = '\\left( ' + self.right.get_latex() + '\\right) '
         else:
             right_latex = self.right.get_latex()
+
+        # negative digit * not a digit
+        if isinstance(self.left, Const) and (isinstance(self.left.name, int) or isinstance(self.left.name, float)):
+            if not (isinstance(self.right, Const)
+                    and (isinstance(self.right.name, int) or isinstance(self.right.name, float))):
+                if self.left.name == -1:
+                    return '- ' + right_latex
+                if self.left.name < 0:
+                    return left_latex + ' ' + right_latex
         return left_latex + '\\cdot ' + right_latex
 
     def differentiate(self, respect_to: str) -> Expr:
@@ -352,9 +377,10 @@ class Multiply(BinOp):
 
     def simplify(self) -> Expr:
         # Preventing simplification of 1 * (something ^ -1) into (something ^ -1)
-        if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
-            if isinstance(self.left, Const) and self.left.name == 1:
-                return Multiply(Const(1), Pow(self.right.left.simplify(), Const(-1)))
+        # if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
+        #     if isinstance(self.left, Const) and self.left.name == 1:
+        #         return Multiply(Const(1), Pow(self.right.left.simplify(), Const(-1)))
+
         if isinstance(self.left, Const):
             if self.left.name == 1:
                 return self.right.simplify()
@@ -382,8 +408,10 @@ class Multiply(BinOp):
                            Plus(self.left.right.simplify(), self.right.right.simplify()).simplify())
             # Same exponents
             if str(self.left.right) == str(self.right.right):
-                return Pow(Multiply(self.left.left.simplify(), self.right.left.simplify()).simplify(),
-                           self.left.right.simplify())
+                bases_simplified = Multiply(self.left.left.simplify(), self.right.left.simplify()).simplify()
+                # If the bases can get simplified
+                if str(bases_simplified) != str(Multiply(self.left.left, self.right.left)):
+                    return Pow(bases_simplified, self.left.right.simplify())
 
         # (base ^ exp) * base
         if isinstance(self.left, Pow) and str(self.left.left) == str(self.right):
@@ -486,7 +514,8 @@ class Multiply(BinOp):
 
         i = 0
         if get_arrangement_type(lst[i])[0] == 'Power':  # Is it a Power?
-            power_tree = Const(1)
+            power_tree = Multiply(Const(1), lst[i])
+            i += 1
             # Create power_tree
             power_tree, i, end_of_power = get_power_tree(i, lst, power_tree)
 
@@ -498,7 +527,8 @@ class Multiply(BinOp):
                 else:
                     return power_tree
             elif get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:  # Is it a "Rest"?
-                rest_tree = Const(1)
+                rest_tree = lst[i]
+                i += 1
                 # Create rest_tree
                 rest_tree, i = get_rest_tree(i, lst, rest_tree)
 
@@ -511,7 +541,8 @@ class Multiply(BinOp):
                 if i == len(lst):
                     return power_tree
                 elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
-                    non_digit_tree = Const(1)
+                    non_digit_tree = lst[i]
+                    i += 1
                     # Create non_digit_tree
                     non_digit_tree, i = get_non_digit_tree(i, lst, non_digit_tree)
                     if i == len(lst):
@@ -520,7 +551,8 @@ class Multiply(BinOp):
                         # else:
                         return Multiply(non_digit_tree, power_tree)
                     else:  # Must be a Digit
-                        digit_tree = Const(1)
+                        digit_tree = lst[i]
+                        i += 1
                         # Create digit_tree
                         digit_tree = get_digit_tree(i, lst, digit_tree)
                         # if fractions:
@@ -529,7 +561,8 @@ class Multiply(BinOp):
                         # else:
                         return Multiply(Multiply(digit_tree, non_digit_tree), power_tree)
                 else:  # Must be a Digit
-                    digit_tree = Const(1)
+                    digit_tree = lst[i]
+                    i += 1
                     # Create digit_tree
                     digit_tree = get_digit_tree(i, lst, digit_tree)
                     # if fractions:
@@ -538,7 +571,8 @@ class Multiply(BinOp):
                     # else:
                     return Multiply(digit_tree, power_tree)
             elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
-                non_digit_tree = Const(1)
+                non_digit_tree = lst[i]
+                i += 1
                 # Create non_digit_tree
                 non_digit_tree, i = get_non_digit_tree(i, lst, non_digit_tree)
                 if i == len(lst):
@@ -547,7 +581,8 @@ class Multiply(BinOp):
                     # else:
                     return Multiply(non_digit_tree, power_tree)
                 else:  # Must be a Digit
-                    digit_tree = Const(1)
+                    digit_tree = lst[i]
+                    i += 1
                     # Create digit_tree
                     digit_tree = get_digit_tree(i, lst, digit_tree)
                     # if fractions:
@@ -556,7 +591,8 @@ class Multiply(BinOp):
                     # else:
                     return Multiply(Multiply(digit_tree, non_digit_tree), power_tree)
             else:  # Must be a digit tree
-                digit_tree = Const(1)
+                digit_tree = lst[i]
+                i += 1
                 # Create digit_tree
                 digit_tree = get_digit_tree(i, lst, digit_tree)
                 # if fractions:
@@ -564,7 +600,8 @@ class Multiply(BinOp):
                 # else:
                 return Multiply(digit_tree, power_tree)
         elif get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:  # Is it a Rest?
-            rest_tree = Const(1)
+            rest_tree = lst[i]
+            i += 1
             # Create rest_tree
             rest_tree, i = get_rest_tree(i, lst, rest_tree)
             if i == len(lst):
@@ -573,7 +610,8 @@ class Multiply(BinOp):
                 # else:
                 return rest_tree
             elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
-                non_digit_tree = Const(1)
+                non_digit_tree = lst[i]
+                i += 1
                 # Create non_digit_tree
                 non_digit_tree, i = get_non_digit_tree(i, lst, non_digit_tree)
                 if i == len(lst):
@@ -582,7 +620,8 @@ class Multiply(BinOp):
                     # else:
                     return Multiply(non_digit_tree, rest_tree)
                 else:  # Must be a Digit
-                    digit_tree = Const(1)
+                    digit_tree = lst[i]
+                    i += 1
                     # Create digit_tree
                     digit_tree = get_digit_tree(i, lst, digit_tree)
                     # if fractions:
@@ -591,7 +630,8 @@ class Multiply(BinOp):
                     # else:
                     return Multiply(Multiply(digit_tree, non_digit_tree), rest_tree)
             else:  # Must be a Digit
-                digit_tree = Const(1)
+                digit_tree = lst[i]
+                i += 1
                 # Create digit_tree
                 digit_tree = get_digit_tree(i, lst, digit_tree)
                 # if fractions:
@@ -599,7 +639,8 @@ class Multiply(BinOp):
                 # else:
                 return Multiply(digit_tree, rest_tree)
         elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
-            non_digit_tree = Const(1)
+            non_digit_tree = lst[i]
+            i += 1
             # Create non_digit_tree
             non_digit_tree, i = get_non_digit_tree(i, lst, non_digit_tree)
             if i == len(lst):
@@ -608,7 +649,8 @@ class Multiply(BinOp):
                 # else:
                 return non_digit_tree
             else:  # Must be a digit
-                digit_tree = Const(1)
+                digit_tree = lst[i]
+                i += 1
                 # Create digit_tree
                 digit_tree = get_digit_tree(i, lst, digit_tree)
                 # if fractions:
@@ -616,7 +658,8 @@ class Multiply(BinOp):
                 # else:
                 return Multiply(digit_tree, non_digit_tree)
         else:  # Must be a Digit
-            digit_tree = Const(1)
+            digit_tree = lst[i]
+            i += 1
             # Create digit_tree
             digit_tree = get_digit_tree(i, lst, digit_tree)
             return digit_tree
@@ -779,21 +822,21 @@ class Pow(BinOp):
         if isinstance(self.right, Const) and self.right.name == -1:
             return '\\displaystyle\\frac{1}{ ' + self.left.get_latex() + '} '
         if isinstance(self.left, Trig):
-            return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '( ' + self.left.arg.get_latex() + ') '
+            return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
         if isinstance(self.left, Log):
             if self.left.base.name == 'e':
-                return '{ \\ln } ' + '^' + '{ ' + self.right.get_latex() + '} ' + '( ' + self.left.arg.get_latex() + ') '
-            return '{\\log_{ ' + self.left.base.get_latex() + '} } ' + '^' + '{ ' + self.right.get_latex() + '} ' + '( ' + self.left.arg.get_latex() + ') '
+                return '{ \\ln } ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
+            return '{\\log_{ ' + self.left.base.get_latex() + '} } ' + '^' + '{ ' + self.right.get_latex() + '} ' \
+                + '\\left( ' + self.left.arg.get_latex() + '\\right) '
         if isinstance(self.left, Plus) or isinstance(self.left, Multiply) or isinstance(self.left, Pow) or \
                 is_minus(self.left)[0]:
-            left_latex = '( ' + self.left.get_latex() + ') '
+            left_latex = '\\left( ' + self.left.get_latex() + '\\right) '
         else:
             left_latex = self.left.get_latex()
-        minus, abs_val = is_minus(self.right)
-        if minus:
-            return '\\displaystyle\\frac{1}{ ' + left_latex + '^ ' + abs_val.get_latex() + '} '
-        else:
-            return '{ ' + left_latex + '} ' + '^' + '{ ' + self.right.get_latex() + '} '
+        # minus, abs_val = is_minus(self.right)
+        # if minus:
+        #     return '\\displaystyle\\frac{1}{ { ' + left_latex + '}^{' + abs_val.get_latex() + '} } '
+        return '{ ' + left_latex + '} ' + '^ { ' + self.right.get_latex() + '} '
 
     def differentiate(self, respect_to: str) -> Expr:
         if isinstance(self.left, Const) and isinstance(self.right, Const):
@@ -834,10 +877,47 @@ class Pow(BinOp):
             else:
                 return Pow(Const((self.left.name) ** (-self.right.name)), Const(-1))
 
+        if isinstance(self.left, Multiply):
+            right_simplified = self.right.simplify()
+            return Multiply(Pow(self.left.left.simplify(), right_simplified).simplify(),
+                            Pow(self.left.right.simplify(), right_simplified).simplify()).simplify()
+
+        if isinstance(self.left, Pow):
+            return Pow(self.left.left.simplify(),
+                       Multiply(self.left.right.simplify(), self.right.simplify()).simplify()).simplify()
+
+        # a ^ loga(something)
+        if isinstance(self.right, Log) and str(self.left) == str(self.right.base):
+            return self.right.arg.simplify()
+
+        if isinstance(self.right, Multiply):
+            log_arg, new_exponent = remove_log(self.left, self.right)
+            if log_arg:
+                return Pow(log_arg.simplify(), new_exponent.simplify()).simplify()
+
         return Pow(self.left.simplify(), self.right.simplify())
 
     def rearrange(self) -> Expr:
         return Pow(self.left.rearrange(), self.right.rearrange())
+
+
+def remove_log(base: Expr, expr: Multiply) -> tuple:
+    """If there is log_base(arg) in expr, replace it with Const(1).
+    Returns a tuple in the form (argument_of_log, new_expr), where new_expr is the mutated expr object.
+    """
+    if isinstance(expr.left, Log) and str(expr.left.base) == str(base):
+        return (expr.left.arg, expr.right)
+    if isinstance(expr.right, Log) and str(expr.right.base) == str(base):
+        return (expr.right.arg, expr.left)
+    if isinstance(expr.right, Multiply):
+        right_result = remove_log(base, expr.right)
+        if right_result[0]:
+            return (right_result[0], Multiply(expr.left, right_result[1]))
+    if isinstance(expr.left, Multiply):
+        left_result = remove_log(base, expr.left)
+        if left_result[0]:
+            return (left_result[0], Multiply(left_result[1], expr.right))
+    return (None, None)
 
 
 class Var(Num):
@@ -888,7 +968,7 @@ class Trig(Func):
         return self.name + ' ( ' + str(self.arg) + ') '
 
     def get_latex(self) -> str:
-        return '\\' + self.name + ' ( ' + self.arg.get_latex() + ') '
+        return '\\' + self.name + ' \\left( ' + self.arg.get_latex() + '\\right) '
 
     def differentiate(self, respect_to: str) -> Expr:
         if self.name == 'sin':
@@ -919,7 +999,7 @@ class Trig(Func):
             #                          )
             #                 )
         if self.name == 'cot':
-            return Multiply(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))), Trig('cos', self.arg)),
+            return Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))),
                             self.arg.differentiate(respect_to))
             # return Multiply(Const(-1),
             #                 Multiply(Pow(Trig('csc', self.arg), Const(2)),
@@ -970,7 +1050,7 @@ class Log(Func):
 
     def __init__(self, base: Const, arg: Expr) -> None:
         try:
-            if isinstance(arg, Const) and arg.name == 0:
+            if isinstance(arg, Const) and (arg.name == 0 or arg.name == 1):
                 raise LogZeroError
             self.base = base
             super().__init__(arg)
@@ -985,9 +1065,9 @@ class Log(Func):
 
     def get_latex(self) -> str:
         if self.base.name == 'e':
-            return '\\ln ( ' + self.arg.get_latex() + ') '
+            return '\\ln \\left( ' + self.arg.get_latex() + '\\right) '
         else:
-            return '\\log_{' + self.base.get_latex() + '} ( ' + self.arg.get_latex() + ') '
+            return '\\log_{' + self.base.get_latex() + '} \\left( ' + self.arg.get_latex() + '\\right) '
 
     def differentiate(self, respect_to: str) -> Expr:
         if not isinstance(self.arg, Const):
@@ -1002,8 +1082,12 @@ class Log(Func):
             return Const(0)
 
     def simplify(self) -> Expr:
-        if self.base.name == 'e' and isinstance(self.arg, Const) and self.arg.name == 'e':
-            return Const(1)
+        if isinstance(self.arg, Const):
+            if self.arg.name == self.base.name:
+                return Const(1)
+            if self.arg.name == 1:
+                return Const(0)
+
         return Log(self.base, self.arg.simplify())
 
 
@@ -1092,7 +1176,7 @@ class LogZeroError(Exception):
     msg: str
 
     def __init__(self) -> None:
-        self.msg = 'You cannot define log(0). Please try again!'
+        self.msg = 'Logarithm base is invalid!'
 
 
 class TrigError(Exception):

@@ -246,7 +246,7 @@ def differentiate(input_text: str, variable: str = 'x') -> str:
                 print('curr : ' + str(curr))
             # print(simplified)
         # todo: toggle below for graph
-        visualization_runner(curr)
+        # visualization_runner(curr)
         return curr.get_latex()
     else:
         return '\\text{Error has occurred!}'
