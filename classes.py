@@ -13,7 +13,7 @@ from typing import *
 # implemented e ^ ln x = x simplification; a ^ (... * loga x * ...) = x ^ ... simplification (an O(n) algorithm that looks through all nodes in the exponent?)
 # todo: logx ( x )????
 # todo: use some kind of gcd algorithm for fraction simplification
-# todo: create new method call 'trig_simplify'
+# created new method call 'trig_simplify'
 # todo: make it so non-constants can be used in logarithm base
 # todo: implement logarithm rules
 # todo: implement something + ( -1 * something ) = 0 simplification
@@ -24,25 +24,29 @@ class Expr:
     """An abstract class representing a mathematial expression.
     """
 
-    def __str__(self) -> Any:
-        return NotImplementedError
+    def __str__(self) -> str:
+        raise NotImplementedError
 
-    def get_latex(self) -> Any:
+    def get_latex(self) -> str:
         """Get the LaTeX code for the expression."""
-        return NotImplementedError
+        raise NotImplementedError
 
     def differentiate(self, respect_to: str) -> Any:
         """Differentiate the expression."""
-        return NotImplementedError
+        raise NotImplementedError
 
     def simplify(self, expand: bool) -> Any:
         """Simplify the expression.
         If expand is True, it will expand terms as well (e.g. expanding multinomials, distribution in multiplication).
         """
-        return NotImplementedError
+        return self
 
     def rearrange(self) -> Any:
         """Rearrange the expression."""
+        return self
+
+    def trig_simplify(self) -> Any:
+        """Simplify any trigonometric functions."""
         return self
 
     def __lt__(self, other) -> bool:
@@ -84,15 +88,35 @@ class Expr:
                 elif self_coefficient > other_coefficient:
                     return False
                 # At this point, self_coefficient == other_coefficient:
-            elif self_type == 'Function':  # todo: sort by argument first?
+            elif self_type == 'Function':
                 if self_function_arg < other_function_arg:
                     return True
                 elif self_function_arg > other_function_arg:
                     return False
                 # At this point, self_function_arg is same object as other_function_arg
-                elif self_function_name < other_function_name:
+                # For exponents: other types > int > float
+                elif isinstance(self_exponent, Const) and isinstance(other_exponent, Const) and isinstance(
+                        self_exponent.name, float) and isinstance(other_exponent.name, int):
                     return True
-                elif self_function_name > other_function_name:
+                elif isinstance(self_exponent, Const) and isinstance(other_exponent, Const) and isinstance(
+                        self_exponent.name, int) and isinstance(other_exponent.name, float):
+                    return False
+                elif isinstance(self_exponent, Const) and isinstance(self_exponent.name, int) and not_int_or_float(
+                        other_exponent):
+                    return True
+                elif not_int_or_float(self_exponent) and isinstance(other_exponent, Const) and isinstance(
+                        other_exponent.name, int):
+                    return False
+                elif isinstance(self_exponent, Const) and isinstance(self_exponent.name, float) and not_int_or_float(
+                        other_exponent):
+                    return True
+                elif not_int_or_float(self_exponent) and isinstance(other_exponent, Const) and isinstance(
+                        other_exponent.name, float):
+                    return False
+                # At this point, self_exponent and other_exponent are both float, int, or something else
+                elif func_name_priority(self_function_name) < func_name_priority(other_function_name):
+                    return True
+                elif func_name_priority(self_function_name) > func_name_priority(other_function_name):
                     return False
                 # At this point, self_function_name == other_function_name:
                 elif self_exponent < other_exponent:
@@ -157,6 +181,26 @@ class Expr:
                 if isinstance(self_base, Const) and isinstance(other_base, Const):
                     return self_base.name < other_base.name
             return False
+
+
+def not_int_or_float(expr: Expr) -> bool:
+    """Return true if expr does NOT represent an int or a float."""
+    return not (isinstance(expr, Const) and (isinstance(expr.name, int) or isinstance(expr.name, float)))
+
+
+def func_name_priority(name: str) -> int:
+    """Returns the priority of the name of the function.
+    sin > cos > tan > csc > sec > cot > arcsin > arccos > arctan > log.
+    -1 is returned if name is an invalid function name.
+
+    Preconditions:
+        - name in {'sin', 'cos', 'tan', 'csc', 'sec', 'cot', 'arcsin', 'arccos', 'arctan', 'log'}
+    """
+    hashmap = {'sin': 10, 'cos': 9, 'tan': 8, 'csc': 7, 'sec': 6, 'cot': 5, 'arcsin': 4, 'arccos': 3, 'arctan': 2,
+               'log': 1}
+    if name in hashmap:
+        return hashmap[name]
+    return -1
 
 
 # class Nothing(Expr):
@@ -281,20 +325,24 @@ class Plus(BinOp):
                 #       a  b c  d
                 # Case 1: a and c are the same object
                 if str(self.left.left) == str(self.right.left):
-                    return Multiply(Plus(self.left.right.simplify(expand), self.right.right.simplify(expand)).simplify(expand),
-                                    self.left.left.simplify(expand))  # .simplify(expand)
+                    return Multiply(
+                        Plus(self.left.right.simplify(expand), self.right.right.simplify(expand)).simplify(expand),
+                        self.left.left.simplify(expand))  # .simplify(expand)
                 # Case 2: a and d are the same object
                 if str(self.left.left) == str(self.right.right):
-                    return Multiply(Plus(self.left.right.simplify(expand), self.right.left.simplify(expand)).simplify(expand),
-                                    self.left.left.simplify(expand))  # .simplify(expand)
+                    return Multiply(
+                        Plus(self.left.right.simplify(expand), self.right.left.simplify(expand)).simplify(expand),
+                        self.left.left.simplify(expand))  # .simplify(expand)
                 # Case 3: b and c are the same object
                 if str(self.left.right) == str(self.right.left):
-                    return Multiply(Plus(self.left.left.simplify(expand), self.right.right.simplify(expand)).simplify(expand),
-                                    self.left.right.simplify(expand))  # .simplify(expand)
+                    return Multiply(
+                        Plus(self.left.left.simplify(expand), self.right.right.simplify(expand)).simplify(expand),
+                        self.left.right.simplify(expand))  # .simplify(expand)
                 # Case 4: b and d are the same object
                 if str(self.left.right) == str(self.right.right):
-                    return Multiply(Plus(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(expand),
-                                    self.left.right.simplify(expand))  # .simplify(expand)
+                    return Multiply(
+                        Plus(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(expand),
+                        self.left.right.simplify(expand))  # .simplify(expand)
 
             if isinstance(self.left, Multiply):
                 #           +
@@ -328,7 +376,6 @@ class Plus(BinOp):
                     return Multiply(Plus(Const(1), self.right.left.simplify(expand)).simplify(expand),
                                     self.left.simplify(expand))
 
-
         # # Multiply + Expr or Expr + Multiply
         # if isinstance(self.left, Multiply) or isinstance(self.right, Multiply):
         #     result = Plus(self.left.simplify(expand), self.right.simplify(expand)).simplify(expand)
@@ -361,6 +408,9 @@ class Plus(BinOp):
             tree = Plus(tree, lst[i])
 
         return tree
+
+    def trig_simplify(self) -> Expr:
+        return Plus(self.left.trig_simplify(), self.right.trig_simplify())
 
 
 def expr_to_list(obj: Expr, root: BinOp) -> list:
@@ -427,10 +477,12 @@ class Multiply(BinOp):
         if expand:
             if isinstance(self.left, Plus):
                 right_simplified = self.right.simplify(expand)
-                return Plus(Multiply(right_simplified, self.left.left.simplify(expand)), Multiply(right_simplified, self.left.right.simplify(expand))).simplify(expand)
+                return Plus(Multiply(right_simplified, self.left.left.simplify(expand)),
+                            Multiply(right_simplified, self.left.right.simplify(expand))).simplify(expand)
             if isinstance(self.right, Plus):
                 left_simplified = self.left.simplify(expand)
-                return Plus(Multiply(left_simplified, self.right.left.simplify(expand)), Multiply(left_simplified, self.right.right.simplify(expand))).simplify(expand)
+                return Plus(Multiply(left_simplified, self.right.left.simplify(expand)),
+                            Multiply(left_simplified, self.right.right.simplify(expand))).simplify(expand)
 
         if isinstance(self.left, Const):
             if self.left.name == 1:
@@ -455,24 +507,33 @@ class Multiply(BinOp):
         if isinstance(self.left, Pow) and isinstance(self.right, Pow):
             # Same bases
             if str(self.left.left) == str(self.right.left):
-                return Pow(self.left.left.simplify(expand),
-                           Plus(self.left.right.simplify(expand), self.right.right.simplify(expand)).simplify(expand))
+                exponents_simplified = Plus(self.left.right.simplify(expand),
+                                            self.right.right.simplify(expand)).simplify(expand)
+                # If the exponents can get simplified:
+                if str(exponents_simplified) != str(Plus(self.left.right, self.right.right)):
+                    return Pow(self.left.left.simplify(expand),
+                               exponents_simplified)
             # Same exponents
             if str(self.left.right) == str(self.right.right):
-                bases_simplified = Multiply(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(expand)
+                bases_simplified = Multiply(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(
+                    expand)
                 # If the bases can get simplified
                 if str(bases_simplified) != str(Multiply(self.left.left, self.right.left)):
                     return Pow(bases_simplified, self.left.right.simplify(expand))
 
         # (base ^ exp) * base
         if isinstance(self.left, Pow) and str(self.left.left) == str(self.right):
-            return Pow(self.right.simplify(expand),
-                       Plus(self.left.right.simplify(expand), Const(1)).simplify(expand))
+            exponents_simplified = Plus(self.left.right.simplify(expand), Const(1)).simplify(expand)
+            # If the exponents can get simplified
+            if str(exponents_simplified) != str(Plus(self.left.right, Const(1))):
+                return Pow(self.right.simplify(expand), exponents_simplified)
 
         # base * (base ^ exp)
         if isinstance(self.right, Pow) and str(self.right.left) == str(self.left):
-            return Pow(self.left.simplify(expand),
-                       Plus(self.right.right.simplify(expand), Const(1)).simplify(expand))
+            exponents_simplified = Plus(self.right.right.simplify(expand), Const(1)).simplify(expand)
+            # If the exponents can get simplified
+            if str(exponents_simplified) != str(Plus(self.right.right, Const(1))):
+                return Pow(self.left.simplify(expand), exponents_simplified)
 
         #       *
         #      / \
@@ -485,8 +546,10 @@ class Multiply(BinOp):
                 if str(left_simplified) != str(self.left):
                     return Multiply(left_simplified, self.right.simplify(expand)).simplify(expand)
                 else:
-                    lr_and_r_simplified = Multiply(self.left.right, self.right).simplify(expand)
-                    if str(lr_and_r_simplified) != str(Multiply(self.left.right, self.right)):
+                    lr_simplified = self.left.right.simplify(expand)
+                    r_simplified = self.right.simplify(expand)
+                    lr_and_r_simplified = Multiply(lr_simplified, r_simplified).simplify(expand)
+                    if str(lr_and_r_simplified) != str(Multiply(lr_simplified, r_simplified)):
                         return Multiply(self.left.left.simplify(expand), lr_and_r_simplified).simplify(expand)
 
         # # <some_type> * (<some_type> * Expr)
@@ -737,6 +800,93 @@ class Multiply(BinOp):
         # if not power_tree:  # If there are no Power objects
         #     ...
 
+    def trig_simplify(self) -> Expr:
+        # sin ^ n * cos ^ m
+        if isinstance(self.left, Pow) and isinstance(self.right, Pow) and isinstance(self.left.left, Trig) and \
+                isinstance(self.right.left, Trig):
+            if self.left.left.name == 'sin' and self.right.left.name == 'cos' and str(self.left.left.arg) == str(
+                    self.right.left.arg):
+                arg = self.left.left.arg.trig_simplify()
+                if isinstance(self.left.right, Const) and isinstance(self.left.right.name, int) and \
+                        isinstance(self.right.right, Const) and isinstance(self.right.right.name, int):
+                    sin_exp = self.left.right.name
+                    cos_exp = self.right.right.name
+                    sin_exp_abs = abs(sin_exp)
+                    cos_exp_abs = abs(cos_exp)
+                    if sin_exp > 0 and cos_exp < 0:
+                        if sin_exp_abs > cos_exp_abs:
+                            new_exp = sin_exp_abs - cos_exp_abs
+                            if new_exp != 1:
+                                return Multiply(Pow(Trig('sin', arg), Const(new_exp)),
+                                                Pow(Trig('tan', arg), Const(cos_exp_abs)))
+                            else:
+                                return Multiply(Trig('sin', arg), Pow(Trig('tan', arg), Const(cos_exp_abs)))
+                        elif sin_exp_abs < cos_exp_abs:
+                            new_exp = cos_exp_abs - sin_exp_abs
+                            if new_exp != 1:
+                                return Multiply(Pow(Trig('tan', arg), Const(sin_exp_abs)),
+                                                Pow(Trig('sec', arg), Const(new_exp)))
+                            else:
+                                return Multiply(Pow(Trig('tan', arg), Const(sin_exp_abs)), Trig('sec', arg))
+                        else:  # sin_exp_abs == cos_exp_abs
+                            return Pow(Trig('tan', arg), Const(sin_exp_abs))
+                    if sin_exp < 0 and cos_exp > 0:
+                        if cos_exp_abs > sin_exp_abs:
+                            new_exp = cos_exp_abs - sin_exp_abs
+                            if new_exp != 1:
+                                return Multiply(Pow(Trig('cos', arg), Const(new_exp)),
+                                                Pow(Trig('cot', arg), Const(sin_exp_abs)))
+                            else:
+                                return Multiply(Trig('cos', arg), Pow(Trig('cot', arg), Const(sin_exp_abs)))
+                        elif cos_exp_abs < sin_exp_abs:
+                            new_exp = sin_exp_abs - cos_exp_abs
+                            if new_exp != 1:
+                                return Multiply(Pow(Trig('csc', arg), Const(new_exp)),
+                                                Pow(Trig('cot', arg), Const(cos_exp_abs)))
+                            else:
+                                return Multiply(Trig('csc', arg), Pow(Trig('cot', arg), Const(cos_exp_abs)))
+                        else:  # sin_exp_abs == cos_exp_abs
+                            Pow(Trig('cot', arg), Const(sin_exp_abs))
+
+        # sin * cos ^ n
+        if isinstance(self.left, Trig) and isinstance(self.right, Pow) and isinstance(self.right.left, Trig):
+            if self.left.name == 'sin' and self.right.left.name == 'cos' and str(self.left.arg) == str(
+                    self.right.left.arg):
+                arg = self.left.arg.trig_simplify()
+                if isinstance(self.right.right, Const) and isinstance(self.right.right.name, int):
+                    cos_exp = self.right.right.name
+                    cos_exp_abs = abs(cos_exp)
+                    if cos_exp < 0:
+                        if cos_exp_abs > 1:
+                            return Multiply(Trig('tan', arg), Pow(Trig('sec', arg), Const(cos_exp_abs - 1)))
+                        elif cos_exp_abs == 1:
+                            return Trig('tan', arg)
+                        # Don't do anything for cos_exp_abs == 0
+
+        # sin ^ n * cos
+        if isinstance(self.left, Pow) and isinstance(self.left.left, Trig) and isinstance(self.right, Trig):
+            if self.left.left.name == 'sin' and self.right.name == 'cos' and str(self.left.left.arg) == str(
+                    self.right.arg):
+                arg = self.right.arg.trig_simplify()
+                if isinstance(self.left.right, Const) and isinstance(self.left.right.name, int):
+                    sin_exp = self.left.right.name
+                    sin_exp_abs = abs(sin_exp)
+                    if sin_exp < 0:
+                        if sin_exp_abs > 1:
+                            return Multiply(Trig('cot', arg), Pow(Trig('csc', arg), Const(sin_exp_abs - 1)))
+                        elif sin_exp_abs == 1:
+                            return Trig('cot', arg)
+                        # Don't do anything for sin_exp_abs == 0
+
+        if isinstance(self.left, Multiply):
+            lr_trig_simplified = self.left.right.trig_simplify()
+            r_trig_simplified = self.right.trig_simplify()
+            lr_and_r_trig_simplified = Multiply(lr_trig_simplified, r_trig_simplified).trig_simplify()
+            if str(lr_and_r_trig_simplified) != str(Multiply(lr_trig_simplified, r_trig_simplified)):
+                return Multiply(self.left.left.trig_simplify(), lr_and_r_trig_simplified).trig_simplify()
+
+        return Multiply(self.left.trig_simplify(), self.right.trig_simplify())
+
 
 def get_power_tree(i: int, lst: list, power_tree: Expr) -> tuple:
     """Returns a tuple in the form of (power_tree, new_index, end_of_power).
@@ -923,13 +1073,17 @@ class Pow(BinOp):
 
         if expand:
             # Binomial expansion
-            if isinstance(self.right, Const) and isinstance(self.right.name, int) and self.right.name > 1 and isinstance(self.left, Plus):
+            if isinstance(self.right, Const) and isinstance(self.right.name,
+                                                            int) and self.right.name > 1 and isinstance(self.left,
+                                                                                                        Plus):
                 n = self.right.name
                 x = self.left.left.simplify(expand)
                 y = self.left.right.simplify(expand)
                 tree = Pow(x, Const(n)).simplify(expand)
                 for k in range(1, n + 1):
-                    tree = Plus(tree, Multiply(Multiply(Const(choose(n, k)), Pow(x, Const(n - k)).simplify(expand)).simplify(expand), Pow(y, Const(k)).simplify(expand)).simplify(expand)).simplify(expand)
+                    tree = Plus(tree, Multiply(
+                        Multiply(Const(choose(n, k)), Pow(x, Const(n - k)).simplify(expand)).simplify(expand),
+                        Pow(y, Const(k)).simplify(expand)).simplify(expand)).simplify(expand)
                 return tree
 
         if isinstance(self.left, Const) and isinstance(self.left.name, int) and \
@@ -946,7 +1100,8 @@ class Pow(BinOp):
 
         if isinstance(self.left, Pow):
             return Pow(self.left.left.simplify(expand),
-                       Multiply(self.left.right.simplify(expand), self.right.simplify(expand)).simplify(expand)).simplify(expand)
+                       Multiply(self.left.right.simplify(expand), self.right.simplify(expand)).simplify(
+                           expand)).simplify(expand)
 
         # a ^ loga(something)
         if isinstance(self.right, Log) and str(self.left) == str(self.right.base):
@@ -961,6 +1116,9 @@ class Pow(BinOp):
 
     def rearrange(self) -> Expr:
         return Pow(self.left.rearrange(), self.right.rearrange())
+
+    def trig_simplify(self) -> Expr:
+        return Pow(self.left.trig_simplify(), self.right.trig_simplify())
 
 
 def choose(n, k):
@@ -1094,7 +1252,8 @@ class Trig(Func):
 
     def simplify(self, expand: bool) -> Expr:
         if self.name == 'tan':
-            return Multiply(Trig('sin', self.arg.simplify(expand)), Pow(Trig('cos', self.arg.simplify(expand)), Const(-1)))
+            return Multiply(Trig('sin', self.arg.simplify(expand)),
+                            Pow(Trig('cos', self.arg.simplify(expand)), Const(-1)))
         if self.name == 'sec':
             return Multiply(Const(1), Pow(Trig('cos', self.arg.simplify(expand)), Const(-1)))
         if self.name == 'csc':
@@ -1102,6 +1261,9 @@ class Trig(Func):
         if self.name == 'cot':
             return Multiply(Const(1), Pow(Trig('tan', self.arg.simplify(expand)), Const(-1)))
         return Trig(self.name, self.arg.simplify(expand))
+
+    def trig_simplify(self) -> Expr:
+        return Trig(self.name, self.arg.trig_simplify())
 
 
 class Log(Func):
@@ -1160,6 +1322,9 @@ class Log(Func):
                 return Const(0)
 
         return Log(self.base, self.arg.simplify(expand))
+
+    def trig_simplify(self) -> Expr:
+        return Log(self.base.trig_simplify(), self.arg.trig_simplify())
 
 
 def process_to_list(obj: Expr) -> list[tuple[str, int | float | str]]:

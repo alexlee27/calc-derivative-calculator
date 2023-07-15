@@ -286,8 +286,8 @@ def tester() -> None:
         expr = string_to_expr(infix_expression, {variable})
         print(expr)
         if expr is not None:
-            prompt = input('\'s\' for simplifying, \'r\' for rearranging')
-            while prompt.lower() in {'s', 'r'}:
+            prompt = input('\'s\' for simplifying, \'r\' for rearranging, \'t\' for trig simplifying')
+            while prompt.lower() in {'s', 'r', 't'}:
                 if prompt.lower() == 's':
                     prev = expr
                     simplified = prev.simplify(expand=True)
@@ -308,6 +308,13 @@ def tester() -> None:
                     print(rearranged)
                     visualization_runner(rearranged)
                     expr = rearranged
+                if prompt.lower() == 't':
+                    print(expr)
+                    trig_simplified = expr.trig_simplify()
+                    print(trig_simplified)
+                    print(trig_simplified.get_latex())
+                    expr = trig_simplified
+
                 prompt = input('\'s\' for simplifying, \'r\' for rearranging')
     print('Program is done')
 
