@@ -12,13 +12,12 @@ from typing import *
 # sorted by argument first for (trig) functions
 # implemented e ^ ln x = x simplification; a ^ (... * loga x * ...) = x ^ ... simplification (an O(n) algorithm that looks through all nodes in the exponent?)
 # todo: logx ( x )????
-# todo: use euclidean gcd algorithm for fraction simplification
+# todo: use some kind of gcd algorithm for fraction simplification
 # todo: create new method call 'trig_simplify'
 # todo: make it so non-constants can be used in logarithm base
 # todo: implement logarithm rules
-# todo: implement something + ( -1 * something ) = 0 simplifivation
+# todo: implement something + ( -1 * something ) = 0 simplification
 # todo: a ^ (b + c) = a^b * a^c (where b + c can't be simplified)
-
 
 
 class Expr:
@@ -36,8 +35,10 @@ class Expr:
         """Differentiate the expression."""
         return NotImplementedError
 
-    def simplify(self) -> Any:
-        """Simplify the expression."""
+    def simplify(self, expand: bool) -> Any:
+        """Simplify the expression.
+        If expand is True, it will expand terms as well (e.g. expanding multinomials, distribution in multiplication).
+        """
         return NotImplementedError
 
     def rearrange(self) -> Any:
@@ -246,55 +247,97 @@ class Plus(BinOp):
     def differentiate(self, respect_to: str) -> Expr:
         return Plus(self.left.differentiate(respect_to), self.right.differentiate(respect_to))
 
-    def simplify(self) -> Expr:
+    def simplify(self, expand: bool) -> Expr:
         # self.left == self.right
         if str(self.left) == str(self.right):
-            return Multiply(Const(2), self.left.simplify()).simplify()
+            return Multiply(Const(2), self.left.simplify(expand)).simplify(expand)
         # self.left is Num(0)
         if isinstance(self.left, Const) and self.left.name == 0:
-            return self.right.simplify()
+            return self.right.simplify(expand)
         # self.right is Num(0)
         if isinstance(self.right, Const) and self.right.name == 0:
-            return self.left.simplify()
+            return self.left.simplify(expand)
         # Num + Num
         if isinstance(self.left, Const) and isinstance(self.right, Const) and \
                 (isinstance(self.left.name, int) or isinstance(self.left.name, float)) and \
                 (isinstance(self.right.name, int) or isinstance(self.right.name, float)):
             return Const(self.left.name + self.right.name)
 
-        # Multiply + Multiply
-        if isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
-            #           +
-            #          / \
-            #         *   *
-            #        /\   /\
-            #       a  b c  d
-            # Case 1: a and c are the same object
-            if str(self.left.left) == str(self.right.left):
-                return Multiply(Plus(self.left.right.simplify(), self.right.right.simplify()).simplify(),
-                                self.left.left.simplify())  # .simplify()
-            # Case 2: a and d are the same object
-            if str(self.left.left) == str(self.right.right):
-                return Multiply(Plus(self.left.right.simplify(), self.right.left.simplify()).simplify(),
-                                self.left.left.simplify())  # .simplify()
-            # Case 3: b and c are the same object
-            if str(self.left.right) == str(self.right.left):
-                return Multiply(Plus(self.left.left.simplify(), self.right.right.simplify()).simplify(),
-                                self.left.right.simplify())  # .simplify()
-            # Case 4: b and d are the same object
-            if str(self.left.right) == str(self.right.right):
-                return Multiply(Plus(self.left.left.simplify(), self.right.left.simplify()).simplify(),
-                                self.left.right.simplify())  # .simplify()
+        # something1 / expr + something2 / expr = (something1 + something2) / expr
+        if isinstance(self.left, Multiply) and isinstance(self.right, Multiply) and \
+                isinstance(self.left.right, Pow) and isinstance(self.right.right, Pow) and \
+                isinstance(self.left.right.right, Const) and self.left.right.right.name == -1 and \
+                str(self.left.right.left) == str(self.right.right.left):
+            return Multiply(Plus(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(expand),
+                            self.left.right.simplify(expand)).simplify(expand)
+
+        if not expand:
+            # Multiply + Multiply
+            if isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
+                #           +
+                #          / \
+                #         *   *
+                #        /\   /\
+                #       a  b c  d
+                # Case 1: a and c are the same object
+                if str(self.left.left) == str(self.right.left):
+                    return Multiply(Plus(self.left.right.simplify(expand), self.right.right.simplify(expand)).simplify(expand),
+                                    self.left.left.simplify(expand))  # .simplify(expand)
+                # Case 2: a and d are the same object
+                if str(self.left.left) == str(self.right.right):
+                    return Multiply(Plus(self.left.right.simplify(expand), self.right.left.simplify(expand)).simplify(expand),
+                                    self.left.left.simplify(expand))  # .simplify(expand)
+                # Case 3: b and c are the same object
+                if str(self.left.right) == str(self.right.left):
+                    return Multiply(Plus(self.left.left.simplify(expand), self.right.right.simplify(expand)).simplify(expand),
+                                    self.left.right.simplify(expand))  # .simplify(expand)
+                # Case 4: b and d are the same object
+                if str(self.left.right) == str(self.right.right):
+                    return Multiply(Plus(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(expand),
+                                    self.left.right.simplify(expand))  # .simplify(expand)
+
+            if isinstance(self.left, Multiply):
+                #           +
+                #          / \
+                #         *   c
+                #        /\
+                #       a  b
+                # Case 1: a and c are the same object
+                if str(self.left.left) == str(self.right):
+                    return Multiply(Plus(self.left.right.simplify(expand), Const(1)).simplify(expand),
+                                    self.right.simplify(expand))
+
+                # Case 2: b and c are the same object
+                if str(self.left.right) == str(self.right):
+                    return Multiply(Plus(self.left.left.simplify(expand), Const(1)).simplify(expand),
+                                    self.right.simplify(expand))
+
+            if isinstance(self.right, Multiply):
+                #           +
+                #          / \
+                #         a   *
+                #             /\
+                #            b  c
+                # Case 1: a and b are the same object
+                if str(self.left) == str(self.right.left):
+                    return Multiply(Plus(Const(1), self.right.right.simplify(expand)).simplify(expand),
+                                    self.left.simplify(expand))
+
+                # Case 2: a and c are the same object
+                if str(self.left) == str(self.right.right):
+                    return Multiply(Plus(Const(1), self.right.left.simplify(expand)).simplify(expand),
+                                    self.left.simplify(expand))
+
 
         # # Multiply + Expr or Expr + Multiply
         # if isinstance(self.left, Multiply) or isinstance(self.right, Multiply):
-        #     result = Plus(self.left.simplify(), self.right.simplify()).simplify()
+        #     result = Plus(self.left.simplify(expand), self.right.simplify(expand)).simplify(expand)
 
         # Plus + Plus or Plus + Expr or Expr + Plus
         # if isinstance(self.left, Plus) or isinstance(self.right, Plus):
-        #     return Plus(self.left.simplify(), self.right.simplify()).simplify()
+        #     return Plus(self.left.simplify(expand), self.right.simplify(expand)).simplify(expand)
 
-        return Plus(self.left.simplify(), self.right.simplify())
+        return Plus(self.left.simplify(expand), self.right.simplify(expand))
 
     def rearrange(self) -> Expr:
         """Rearrange the Plus expression."""
@@ -355,13 +398,13 @@ class Multiply(BinOp):
         else:
             right_latex = self.right.get_latex()
 
-        # negative digit * not a digit
+        # digit * not a digit
         if isinstance(self.left, Const) and (isinstance(self.left.name, int) or isinstance(self.left.name, float)):
             if not (isinstance(self.right, Const)
                     and (isinstance(self.right.name, int) or isinstance(self.right.name, float))):
                 if self.left.name == -1:
                     return '- ' + right_latex
-                if self.left.name < 0:
+                else:
                     return left_latex + ' ' + right_latex
         return left_latex + '\\cdot ' + right_latex
 
@@ -375,26 +418,34 @@ class Multiply(BinOp):
         return Plus(Multiply(self.left.differentiate(respect_to), self.right),
                     Multiply(self.left, self.right.differentiate(respect_to)))
 
-    def simplify(self) -> Expr:
+    def simplify(self, expand: bool) -> Expr:
         # Preventing simplification of 1 * (something ^ -1) into (something ^ -1)
         # if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
         #     if isinstance(self.left, Const) and self.left.name == 1:
-        #         return Multiply(Const(1), Pow(self.right.left.simplify(), Const(-1)))
+        #         return Multiply(Const(1), Pow(self.right.left.simplify(expand), Const(-1)))
+
+        if expand:
+            if isinstance(self.left, Plus):
+                right_simplified = self.right.simplify(expand)
+                return Plus(Multiply(right_simplified, self.left.left.simplify(expand)), Multiply(right_simplified, self.left.right.simplify(expand))).simplify(expand)
+            if isinstance(self.right, Plus):
+                left_simplified = self.left.simplify(expand)
+                return Plus(Multiply(left_simplified, self.right.left.simplify(expand)), Multiply(left_simplified, self.right.right.simplify(expand))).simplify(expand)
 
         if isinstance(self.left, Const):
             if self.left.name == 1:
-                return self.right.simplify()
+                return self.right.simplify(expand)
             elif self.left.name == 0:
                 return Const(0)
 
         if isinstance(self.right, Const):
             if self.right.name == 1:
-                return self.left.simplify()
+                return self.left.simplify(expand)
             elif self.right.name == 0:
                 return Const(0)
 
         if str(self.left) == str(self.right):
-            return Pow(self.left.simplify(), Const(2))
+            return Pow(self.left.simplify(expand), Const(2))
 
         if isinstance(self.left, Const) and isinstance(self.right, Const) and not isinstance(self.left.name, str) \
                 and not isinstance(self.right.name, str):
@@ -404,24 +455,24 @@ class Multiply(BinOp):
         if isinstance(self.left, Pow) and isinstance(self.right, Pow):
             # Same bases
             if str(self.left.left) == str(self.right.left):
-                return Pow(self.left.left.simplify(),
-                           Plus(self.left.right.simplify(), self.right.right.simplify()).simplify())
+                return Pow(self.left.left.simplify(expand),
+                           Plus(self.left.right.simplify(expand), self.right.right.simplify(expand)).simplify(expand))
             # Same exponents
             if str(self.left.right) == str(self.right.right):
-                bases_simplified = Multiply(self.left.left.simplify(), self.right.left.simplify()).simplify()
+                bases_simplified = Multiply(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(expand)
                 # If the bases can get simplified
                 if str(bases_simplified) != str(Multiply(self.left.left, self.right.left)):
-                    return Pow(bases_simplified, self.left.right.simplify())
+                    return Pow(bases_simplified, self.left.right.simplify(expand))
 
         # (base ^ exp) * base
         if isinstance(self.left, Pow) and str(self.left.left) == str(self.right):
-            return Pow(self.right.simplify(),
-                       Plus(self.left.right.simplify(), Const(1)).simplify())
+            return Pow(self.right.simplify(expand),
+                       Plus(self.left.right.simplify(expand), Const(1)).simplify(expand))
 
         # base * (base ^ exp)
         if isinstance(self.right, Pow) and str(self.right.left) == str(self.left):
-            return Pow(self.left.simplify(),
-                       Plus(self.right.right.simplify(), Const(1)).simplify())
+            return Pow(self.left.simplify(expand),
+                       Plus(self.right.right.simplify(expand), Const(1)).simplify(expand))
 
         #       *
         #      / \
@@ -430,33 +481,33 @@ class Multiply(BinOp):
         #  ...  A      (where A is an arbitrary arrangement type)
         if isinstance(self.left, Multiply) and not isinstance(self.right, Multiply):
             if get_arrangement_type(self.left.right)[0] == get_arrangement_type(self.right)[0]:
-                left_simplified = self.left.simplify()
+                left_simplified = self.left.simplify(expand)
                 if str(left_simplified) != str(self.left):
-                    return Multiply(left_simplified, self.right.simplify()).simplify()
+                    return Multiply(left_simplified, self.right.simplify(expand)).simplify(expand)
                 else:
-                    lr_and_r_simplified = Multiply(self.left.right, self.right).simplify()
+                    lr_and_r_simplified = Multiply(self.left.right, self.right).simplify(expand)
                     if str(lr_and_r_simplified) != str(Multiply(self.left.right, self.right)):
-                        return Multiply(self.left.left.simplify(), lr_and_r_simplified).simplify()
+                        return Multiply(self.left.left.simplify(expand), lr_and_r_simplified).simplify(expand)
 
         # # <some_type> * (<some_type> * Expr)
         # if isinstance(self.right, Multiply) and type(self.left) == type(self.right.left):
-        #     return Multiply(Multiply(self.left.simplify(),
-        #                              self.right.left.simplify()).simplify(), self.right.right.simplify())  # .simplify()
+        #     return Multiply(Multiply(self.left.simplify(expand),
+        #                              self.right.left.simplify(expand)).simplify(expand), self.right.right.simplify(expand))  # .simplify(expand)
         #
         # # <some_type> * (Expr * <some_type>)
         # if isinstance(self.right, Multiply) and type(self.left) == type(self.right.right):
-        #     return Multiply(Multiply(self.left.simplify(),
-        #                              self.right.right.simplify()).simplify(), self.right.left.simplify())  # .simplify()
+        #     return Multiply(Multiply(self.left.simplify(expand),
+        #                              self.right.right.simplify(expand)).simplify(expand), self.right.left.simplify(expand))  # .simplify(expand)
         #
         # # (<some_type> * Expr) * <some_type>
         # if isinstance(self.left, Multiply) and type(self.right) == type(self.left.left):
-        #     return Multiply(Multiply(self.right.simplify(), self.left.left.simplify()).simplify(),
-        #                     self.left.right.simplify())  # .simplify()
+        #     return Multiply(Multiply(self.right.simplify(expand), self.left.left.simplify(expand)).simplify(expand),
+        #                     self.left.right.simplify(expand))  # .simplify(expand)
         #
         # # (Expr * <some_type>) * <some_type>
         # if isinstance(self.left, Multiply) and type(self.right) == type(self.left.right):
-        #     return Multiply(Multiply(self.right.simplify(), self.left.right.simplify()).simplify(),
-        #                     self.left.left.simplify())  # .simplify()
+        #     return Multiply(Multiply(self.right.simplify(expand), self.left.right.simplify(expand)).simplify(expand),
+        #                     self.left.left.simplify(expand))  # .simplify(expand)
 
         # # Multiply * Multiply
         # if isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
@@ -469,26 +520,26 @@ class Multiply(BinOp):
         #     #       a  b c  d
         #     # Case 1: a and c are the same type
         #     if type(self.left.left) == type(self.right.left):
-        #         return Multiply(Multiply(self.left.left.simplify(), self.right.left.simplify()).simplify(),
-        #                         Multiply(self.left.right.simplify(),
-        #                                  self.right.right.simplify()).simplify())  # .simplify()
+        #         return Multiply(Multiply(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(expand),
+        #                         Multiply(self.left.right.simplify(expand),
+        #                                  self.right.right.simplify(expand)).simplify(expand))  # .simplify(expand)
         #     # Case 2: a and d are the same type
         #     if type(self.left.left) == type(self.right.right):
-        #         return Multiply(Multiply(self.left.left.simplify(), self.right.right.simplify()).simplify(),
-        #                         Multiply(self.left.right.simplify(),
-        #                                  self.right.left.simplify()).simplify())  # .simplify()
+        #         return Multiply(Multiply(self.left.left.simplify(expand), self.right.right.simplify(expand)).simplify(expand),
+        #                         Multiply(self.left.right.simplify(expand),
+        #                                  self.right.left.simplify(expand)).simplify(expand))  # .simplify(expand)
         #     # Case 3: b and c are the same type
         #     if type(self.left.right) == type(self.right.left):
-        #         return Multiply(Multiply(self.left.right.simplify(), self.right.left.simplify()).simplify(),
-        #                         Multiply(self.left.left.simplify(),
-        #                                  self.right.right.simplify()).simplify())  # .simplify()
+        #         return Multiply(Multiply(self.left.right.simplify(expand), self.right.left.simplify(expand)).simplify(expand),
+        #                         Multiply(self.left.left.simplify(expand),
+        #                                  self.right.right.simplify(expand)).simplify(expand))  # .simplify(expand)
         #     # Case 4: b and d are the same type
         #     if type(self.left.right) == type(self.right.right):
-        #         return Multiply(Multiply(self.left.right.simplify(), self.right.right.simplify()).simplify(),
-        #                         Multiply(self.left.left.simplify(),
-        #                                  self.right.left.simplify()).simplify())  # .simplify()
+        #         return Multiply(Multiply(self.left.right.simplify(expand), self.right.right.simplify(expand)).simplify(expand),
+        #                         Multiply(self.left.left.simplify(expand),
+        #                                  self.right.left.simplify(expand)).simplify(expand))  # .simplify(expand)
 
-        return Multiply(self.left.simplify(), self.right.simplify())
+        return Multiply(self.left.simplify(expand), self.right.simplify(expand))
 
     def rearrange(self) -> Any:
         """Rearrange the Multiply expression."""
@@ -795,7 +846,7 @@ class Const(Num):
     def differentiate(self, respect_to: str) -> Expr:
         return Const(0)
 
-    def simplify(self) -> Expr:
+    def simplify(self, expand: bool) -> Expr:
         return self
 
 
@@ -819,8 +870,8 @@ class Pow(BinOp):
         return '( ' + str(self.left) + ') ^ ( ' + str(self.right) + ') '
 
     def get_latex(self) -> str:
-        if isinstance(self.right, Const) and self.right.name == -1:
-            return '\\displaystyle\\frac{1}{ ' + self.left.get_latex() + '} '
+        # if isinstance(self.right, Const) and self.right.name == -1:
+        #     return '\\displaystyle\\frac{1}{ ' + self.left.get_latex() + '} '
         if isinstance(self.left, Trig):
             return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
         if isinstance(self.left, Log):
@@ -863,12 +914,23 @@ class Pow(BinOp):
 
         return Pow(Const('e'), Multiply(self.right, Log(Const('e'), self.left))).differentiate(respect_to)
 
-    def simplify(self) -> Expr:
+    def simplify(self, expand: bool) -> Expr:
         if isinstance(self.right, Const):
             if self.right.name == 1:
-                return self.left.simplify()
+                return self.left.simplify(expand)
             if self.right.name == 0:
                 return Const(1)
+
+        if expand:
+            # Binomial expansion
+            if isinstance(self.right, Const) and isinstance(self.right.name, int) and self.right.name > 1 and isinstance(self.left, Plus):
+                n = self.right.name
+                x = self.left.left.simplify(expand)
+                y = self.left.right.simplify(expand)
+                tree = Pow(x, Const(n)).simplify(expand)
+                for k in range(1, n + 1):
+                    tree = Plus(tree, Multiply(Multiply(Const(choose(n, k)), Pow(x, Const(n - k)).simplify(expand)).simplify(expand), Pow(y, Const(k)).simplify(expand)).simplify(expand)).simplify(expand)
+                return tree
 
         if isinstance(self.left, Const) and isinstance(self.left.name, int) and \
                 isinstance(self.right, Const) and isinstance(self.right.name, int):
@@ -878,27 +940,36 @@ class Pow(BinOp):
                 return Pow(Const((self.left.name) ** (-self.right.name)), Const(-1))
 
         if isinstance(self.left, Multiply):
-            right_simplified = self.right.simplify()
-            return Multiply(Pow(self.left.left.simplify(), right_simplified).simplify(),
-                            Pow(self.left.right.simplify(), right_simplified).simplify()).simplify()
+            right_simplified = self.right.simplify(expand)
+            return Multiply(Pow(self.left.left.simplify(expand), right_simplified).simplify(expand),
+                            Pow(self.left.right.simplify(expand), right_simplified).simplify(expand)).simplify(expand)
 
         if isinstance(self.left, Pow):
-            return Pow(self.left.left.simplify(),
-                       Multiply(self.left.right.simplify(), self.right.simplify()).simplify()).simplify()
+            return Pow(self.left.left.simplify(expand),
+                       Multiply(self.left.right.simplify(expand), self.right.simplify(expand)).simplify(expand)).simplify(expand)
 
         # a ^ loga(something)
         if isinstance(self.right, Log) and str(self.left) == str(self.right.base):
-            return self.right.arg.simplify()
+            return self.right.arg.simplify(expand)
 
         if isinstance(self.right, Multiply):
             log_arg, new_exponent = remove_log(self.left, self.right)
             if log_arg:
-                return Pow(log_arg.simplify(), new_exponent.simplify()).simplify()
+                return Pow(log_arg.simplify(expand), new_exponent.simplify(expand)).simplify(expand)
 
-        return Pow(self.left.simplify(), self.right.simplify())
+        return Pow(self.left.simplify(expand), self.right.simplify(expand))
 
     def rearrange(self) -> Expr:
         return Pow(self.left.rearrange(), self.right.rearrange())
+
+
+def choose(n, k):
+    """Calculates n choose k. Used for calculating binomial coefficients.
+    Credits: user448810 and Beginner on https://stackoverflow.com/questions/15301885/best-way-of-calculating-n-choose-k
+    """
+    if k == 0:
+        return 1
+    return (n * choose(n - 1, k - 1)) // k
 
 
 def remove_log(base: Expr, expr: Multiply) -> tuple:
@@ -937,7 +1008,7 @@ class Var(Num):
         else:
             return Const(0)
 
-    def simplify(self) -> Expr:
+    def simplify(self, expand: bool) -> Expr:
         return self
 
 
@@ -1021,16 +1092,16 @@ class Trig(Func):
                             Pow(Plus(Pow(self.arg, Const(2)), Const(1)), Const(-1))
                             )
 
-    def simplify(self) -> Expr:
+    def simplify(self, expand: bool) -> Expr:
         if self.name == 'tan':
-            return Multiply(Trig('sin', self.arg.simplify()), Pow(Trig('cos', self.arg.simplify()), Const(-1)))
+            return Multiply(Trig('sin', self.arg.simplify(expand)), Pow(Trig('cos', self.arg.simplify(expand)), Const(-1)))
         if self.name == 'sec':
-            return Multiply(Const(1), Pow(Trig('cos', self.arg.simplify()), Const(-1)))
+            return Multiply(Const(1), Pow(Trig('cos', self.arg.simplify(expand)), Const(-1)))
         if self.name == 'csc':
-            return Multiply(Const(1), Pow(Trig('sin', self.arg.simplify()), Const(-1)))
+            return Multiply(Const(1), Pow(Trig('sin', self.arg.simplify(expand)), Const(-1)))
         if self.name == 'cot':
-            return Multiply(Const(1), Pow(Trig('tan', self.arg.simplify()), Const(-1)))
-        return Trig(self.name, self.arg.simplify())
+            return Multiply(Const(1), Pow(Trig('tan', self.arg.simplify(expand)), Const(-1)))
+        return Trig(self.name, self.arg.simplify(expand))
 
 
 class Log(Func):
@@ -1081,14 +1152,14 @@ class Log(Func):
             # Then it is a constant!
             return Const(0)
 
-    def simplify(self) -> Expr:
+    def simplify(self, expand: bool) -> Expr:
         if isinstance(self.arg, Const):
             if self.arg.name == self.base.name:
                 return Const(1)
             if self.arg.name == 1:
                 return Const(0)
 
-        return Log(self.base, self.arg.simplify())
+        return Log(self.base, self.arg.simplify(expand))
 
 
 def process_to_list(obj: Expr) -> list[tuple[str, int | float | str]]:

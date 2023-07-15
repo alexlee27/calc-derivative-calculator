@@ -215,10 +215,10 @@ def main() -> None:
         if expr is not None:
             differentiated = expr.differentiate(variable)
             prev = differentiated
-            simplified = prev.simplify()
+            simplified = prev.simplify(expand)
             while str(simplified) != str(prev):
                 print(prev)
-                prev, simplified = simplified, simplified.simplify()
+                prev, simplified = simplified, simplified.simplify(expand)
             print(simplified)
             visualization_runner(simplified)
     print('Program is done')
@@ -241,13 +241,36 @@ def differentiate(input_text: str, variable: str = 'x') -> str:
             prev2 = None
             while str(curr) != str(prev2):
                 # print(prev2)
-                prev2, curr = curr, curr.simplify()
+                prev2, curr = curr, curr.simplify(expand=True)  # todo: toggle expand
                 print('prev2: ' + str(prev2))
                 print('curr : ' + str(curr))
             # print(simplified)
         # todo: toggle below for graph
         # visualization_runner(curr)
         return curr.get_latex()
+    else:
+        return '\\text{Error has occurred!}'
+
+def testing(input_text: str, variable: str = 'x') -> str:
+    expr = string_to_expr(input_text, {variable})
+    if expr is not None:
+        prev1 = None
+        curr = expr
+        while str(curr) != str(prev1):
+            prev1, curr = curr, curr.rearrange()
+            print('prev1: ' + str(prev1))
+            print('curr : ' + str(curr))
+
+            prev2 = None
+            while str(curr) != str(prev2):
+                # print(prev2)
+                prev2, curr = curr, curr.simplify(expand=False)  # todo: toggle expand
+                print('prev2: ' + str(prev2))
+                print('curr : ' + str(curr))
+            # print(simplified)
+        # todo: toggle below for graph
+        # visualization_runner(curr)
+        print(curr.get_latex())
     else:
         return '\\text{Error has occurred!}'
 
@@ -267,11 +290,12 @@ def tester() -> None:
             while prompt.lower() in {'s', 'r'}:
                 if prompt.lower() == 's':
                     prev = expr
-                    simplified = prev.simplify()
+                    simplified = prev.simplify(expand=True)
                     print(prev)
-                    prev, simplified = simplified, simplified.simplify()
+                    prev, simplified = simplified, simplified.simplify(expand=True)
                     print(simplified)
-                    visualization_runner(simplified)
+                    print(simplified.get_latex())
+                    # visualization_runner(simplified)
                     expr = simplified
                 if prompt.lower() == 'r':
                     # print('1')
