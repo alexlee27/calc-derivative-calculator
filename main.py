@@ -13,15 +13,6 @@ class ParenthesesError(Exception):
     msg = 'The parentheses are mismatched. Please check your input and try again!'
 
 
-class LogBaseVarError(Exception):
-    """Raised when the user attempts to put a variable in the base of a logarithm
-
-    Instance Attributes:
-        - msg: the error message
-    """
-    msg = 'Variables in the bases of logarithms are not supported. Please try again!'
-
-
 def string_to_expr(text: str, variables: set[str]) -> Optional[Expr]:
     """A parser function that converts a string math input to an Expr binary tree.
     Returns None if there is an error.
@@ -195,10 +186,8 @@ def str_to_func(token: str, arg: Expr, variables: set[str]) -> Func:
     if 'ln' in token:
         return Log(Const('e'), arg)
     if 'log' in token:
-        num_object = str_to_num(token[3:], variables)
-        if isinstance(num_object, Const):
-            return Log(num_object, arg)
-        raise LogBaseVarError
+        base_object = string_to_expr(token[3:], variables)
+        return Log(base_object, arg)
     if token in Trig.VALID_NAMES:
         return Trig(token, arg)
 
@@ -251,7 +240,7 @@ def differentiate(input_text: str, variable: str = 'x') -> str:
     else:
         return '\\text{Error has occurred!}'
 
-def testing(input_text: str, variable: str = 'x') -> str:
+def testing(input_text: str, exp: bool, variable: str = 'x') -> str:
     expr = string_to_expr(input_text, {variable})
     if expr is not None:
         prev1 = None
@@ -264,7 +253,7 @@ def testing(input_text: str, variable: str = 'x') -> str:
             prev2 = None
             while str(curr) != str(prev2):
                 # print(prev2)
-                prev2, curr = curr, curr.simplify(expand=False)  # todo: toggle expand
+                prev2, curr = curr, curr.simplify(expand=exp)  # todo: toggle expand
                 print('prev2: ' + str(prev2))
                 print('curr : ' + str(curr))
             # print(simplified)

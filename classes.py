@@ -9,14 +9,15 @@ from typing import *
 # todo: filter fractions in Multiply objects
 # todo: (-1) ^ x, -1 ^ x, -(1 ^ x); fix how input deals with negative signs with non-digits
 # todo: 0 ^ Func and 0 ^ f(x)
+
 # sorted by argument first for (trig) functions
 # implemented e ^ ln x = x simplification; a ^ (... * loga x * ...) = x ^ ... simplification (an O(n) algorithm that looks through all nodes in the exponent?)
-# todo: logx ( x )????
+# implemented logx ( x )????
 # todo: use some kind of gcd algorithm for fraction simplification
 # created new method call 'trig_simplify'
-# todo: make it so non-constants can be used in logarithm base
-# todo: implement logarithm rules
-# todo: implement something + ( -1 * something ) = 0 simplification
+# made it so non-constants can be used in logarithm base
+# implemented logarithm rules
+# implemented something + ( -1 * something ) = 0 simplification
 # todo: a ^ (b + c) = a^b * a^c (where b + c can't be simplified)
 
 
@@ -174,12 +175,37 @@ class Expr:
                         return False
                     i += 1
             elif self_type == 'Digit':
-                if isinstance(self, Pow) and isinstance(other, Const):
+                # Const > Const ^ Digit > Const ^ Non-digit
+                if isinstance(self, Pow) and isinstance(other, Pow):
+                    self_exp_type = get_arrangement_type(self_exponent)[0]
+                    other_exp_type = get_arrangement_type(other_exponent)[0]
+                    if self_exp_type == 'Non-digit' and other_exp_type == 'Digit':
+                        return True
+                    elif self_exp_type == 'Digit' and other_exp_type == 'Non-digit':
+                        return False
+                elif isinstance(self, Pow) and isinstance(other, Const):
                     return True
-                if isinstance(self, Const) and isinstance(other, Pow):
+                elif isinstance(self, Const) and isinstance(self, Pow):
                     return False
-                if isinstance(self_base, Const) and isinstance(other_base, Const):
-                    return self_base.name < other_base.name
+                # At this point, both Const or Const ^ Digit or Const ^ Non-digit
+                elif isinstance(self_base, Const) and isinstance(other_base, Const):
+                    if self_base.name < other_base.name:
+                        return True
+                    elif self_base.name > other_base.name:
+                        return False
+                    elif self_exponent < other_exponent:
+                        return True
+                    elif self_exponent > other_exponent:
+                        return False
+
+
+
+                # if isinstance(self, Pow) and isinstance(other, Const):
+                #     return True
+                # if isinstance(self, Const) and isinstance(other, Pow):
+                #     return False
+                # if isinstance(self_base, Const) and isinstance(other_base, Const):
+                #     return self_base.name < other_base.name
             return False
 
 
@@ -315,66 +341,90 @@ class Plus(BinOp):
             return Multiply(Plus(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(expand),
                             self.left.right.simplify(expand)).simplify(expand)
 
-        if not expand:
-            # Multiply + Multiply
-            if isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
-                #           +
-                #          / \
-                #         *   *
-                #        /\   /\
-                #       a  b c  d
-                # Case 1: a and c are the same object
-                if str(self.left.left) == str(self.right.left):
-                    return Multiply(
-                        Plus(self.left.right.simplify(expand), self.right.right.simplify(expand)).simplify(expand),
-                        self.left.left.simplify(expand))  # .simplify(expand)
-                # Case 2: a and d are the same object
-                if str(self.left.left) == str(self.right.right):
-                    return Multiply(
-                        Plus(self.left.right.simplify(expand), self.right.left.simplify(expand)).simplify(expand),
-                        self.left.left.simplify(expand))  # .simplify(expand)
-                # Case 3: b and c are the same object
-                if str(self.left.right) == str(self.right.left):
-                    return Multiply(
-                        Plus(self.left.left.simplify(expand), self.right.right.simplify(expand)).simplify(expand),
-                        self.left.right.simplify(expand))  # .simplify(expand)
-                # Case 4: b and d are the same object
-                if str(self.left.right) == str(self.right.right):
-                    return Multiply(
-                        Plus(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(expand),
-                        self.left.right.simplify(expand))  # .simplify(expand)
+        # a/b + c/d, where a, b, c, d are numbers
+        # todo; continue implementing
 
-            if isinstance(self.left, Multiply):
-                #           +
-                #          / \
-                #         *   c
-                #        /\
-                #       a  b
-                # Case 1: a and c are the same object
-                if str(self.left.left) == str(self.right):
-                    return Multiply(Plus(self.left.right.simplify(expand), Const(1)).simplify(expand),
-                                    self.right.simplify(expand))
 
-                # Case 2: b and c are the same object
-                if str(self.left.right) == str(self.right):
-                    return Multiply(Plus(self.left.left.simplify(expand), Const(1)).simplify(expand),
-                                    self.right.simplify(expand))
 
-            if isinstance(self.right, Multiply):
-                #           +
-                #          / \
-                #         a   *
-                #             /\
-                #            b  c
-                # Case 1: a and b are the same object
-                if str(self.left) == str(self.right.left):
-                    return Multiply(Plus(Const(1), self.right.right.simplify(expand)).simplify(expand),
-                                    self.left.simplify(expand))
+        # Multiply + Multiply
+        if isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
+            #           +
+            #          / \
+            #         *   *
+            #        /\   /\
+            #       a  b c  d
+            # Case 1: a and c are the same object
+            if str(self.left.left) == str(self.right.left):
+                factor_simplified = Plus(self.left.right.simplify(expand), self.right.right.simplify(expand)).simplify(expand)
+                if isinstance(factor_simplified, Const) and factor_simplified.name == 0:
+                    return Const(0)
+                if not expand:
+                    return Multiply(factor_simplified, self.left.left.simplify(expand))  # .simplify(expand)
+            # Case 2: a and d are the same object
+            if str(self.left.left) == str(self.right.right):
+                factor_simplified = Plus(self.left.right.simplify(expand), self.right.left.simplify(expand)).simplify(expand)
+                if isinstance(factor_simplified, Const) and factor_simplified.name == 0:
+                    return Const(0)
+                if not expand:
+                    return Multiply(factor_simplified, self.left.left.simplify(expand))  # .simplify(expand)
+            # Case 3: b and c are the same object
+            if str(self.left.right) == str(self.right.left):
+                factor_simplified = Plus(self.left.left.simplify(expand), self.right.right.simplify(expand)).simplify(expand)
+                if isinstance(factor_simplified, Const) and factor_simplified.name == 0:
+                    return Const(0)
+                if not expand:
+                    return Multiply(factor_simplified, self.left.right.simplify(expand))  # .simplify(expand)
+            # Case 4: b and d are the same object
+            if str(self.left.right) == str(self.right.right):
+                factor_simplified = Plus(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(expand)
+                if isinstance(factor_simplified, Const) and factor_simplified.name == 0:
+                    return Const(0)
+                if not expand:
+                    return Multiply(factor_simplified, self.left.right.simplify(expand))  # .simplify(expand)
 
-                # Case 2: a and c are the same object
-                if str(self.left) == str(self.right.right):
-                    return Multiply(Plus(Const(1), self.right.left.simplify(expand)).simplify(expand),
-                                    self.left.simplify(expand))
+        if isinstance(self.left, Multiply):
+            #           +
+            #          / \
+            #         *   c
+            #        /\
+            #       a  b
+            # Case 1: a and c are the same object
+            if str(self.left.left) == str(self.right):
+                factor_simplified = Plus(self.left.right.simplify(expand), Const(1)).simplify(expand)
+                if isinstance(factor_simplified, Const) and factor_simplified.name == 0:
+                    return Const(0)
+                if not expand:
+                    return Multiply(factor_simplified, self.right.simplify(expand))
+
+            # Case 2: b and c are the same object
+            if str(self.left.right) == str(self.right):
+                factor_simplified = Plus(self.left.left.simplify(expand), Const(1)).simplify(expand)
+                if isinstance(factor_simplified, Const) and factor_simplified.name == 0:
+                    return Const(0)
+                if not expand:
+                    return Multiply(factor_simplified, self.right.simplify(expand))
+
+        if isinstance(self.right, Multiply):
+            #           +
+            #          / \
+            #         a   *
+            #             /\
+            #            b  c
+            # Case 1: a and b are the same object
+            if str(self.left) == str(self.right.left):
+                factor_simplified = Plus(Const(1), self.right.right.simplify(expand)).simplify(expand)
+                if isinstance(factor_simplified, Const) and factor_simplified.name == 0:
+                    return Const(0)
+                if not expand:
+                    return Multiply(factor_simplified, self.left.simplify(expand))
+
+            # Case 2: a and c are the same object
+            if str(self.left) == str(self.right.right):
+                factor_simplified = Plus(Const(1), self.right.left.simplify(expand)).simplify(expand)
+                if isinstance(factor_simplified, Const) and factor_simplified.name == 0:
+                    return Const(0)
+                if not expand:
+                    return Multiply(factor_simplified, self.left.simplify(expand))
 
         # # Multiply + Expr or Expr + Multiply
         # if isinstance(self.left, Multiply) or isinstance(self.right, Multiply):
@@ -552,7 +602,18 @@ class Multiply(BinOp):
                     if str(lr_and_r_simplified) != str(Multiply(lr_simplified, r_simplified)):
                         return Multiply(self.left.left.simplify(expand), lr_and_r_simplified).simplify(expand)
 
-        # # <some_type> * (<some_type> * Expr)
+        # Simplifying n / m (fractions)
+        if isinstance(self.left, Const) and isinstance(self.left.name, int) and isinstance(self.right, Pow) and \
+            isinstance(self.right.left, Const) and isinstance(self.right.left.name, int) and \
+                isinstance(self.right.right, Const) and self.right.right.name == -1:
+            numerator = self.left.name
+            denominator = self.right.left.name
+            divisor = gcd(numerator, denominator)
+            return Multiply(Const(numerator // divisor), Pow(Const(denominator // divisor), Const(-1)))
+
+
+
+        #  # <some_type> * (<some_type> * Expr)
         # if isinstance(self.right, Multiply) and type(self.left) == type(self.right.left):
         #     return Multiply(Multiply(self.left.simplify(expand),
         #                              self.right.left.simplify(expand)).simplify(expand), self.right.right.simplify(expand))  # .simplify(expand)
@@ -888,6 +949,21 @@ class Multiply(BinOp):
         return Multiply(self.left.trig_simplify(), self.right.trig_simplify())
 
 
+def gcd(x, y) -> int:
+    """Compute the greatest common divisor of x and y.
+    """
+    if y == 0:
+        return abs(x)
+    else:
+        return gcd(y, x % y)
+
+def lcm(x, y) -> int:
+    """Compute the lowest common multiple of x and y.
+    """
+    d = gcd(x, y)
+    return (x // d) * (y // d)
+
+
 def get_power_tree(i: int, lst: list, power_tree: Expr) -> tuple:
     """Returns a tuple in the form of (power_tree, new_index, end_of_power).
     """
@@ -1073,9 +1149,7 @@ class Pow(BinOp):
 
         if expand:
             # Binomial expansion
-            if isinstance(self.right, Const) and isinstance(self.right.name,
-                                                            int) and self.right.name > 1 and isinstance(self.left,
-                                                                                                        Plus):
+            if isinstance(self.right, Const) and isinstance(self.right.name, int) and self.right.name > 1 and isinstance(self.left, Plus):
                 n = self.right.name
                 x = self.left.left.simplify(expand)
                 y = self.left.right.simplify(expand)
@@ -1089,9 +1163,9 @@ class Pow(BinOp):
         if isinstance(self.left, Const) and isinstance(self.left.name, int) and \
                 isinstance(self.right, Const) and isinstance(self.right.name, int):
             if self.right.name >= 0:
-                return Const((self.left.name) ** self.right.name)
+                return Const(self.left.name ** self.right.name)
             else:
-                return Pow(Const((self.left.name) ** (-self.right.name)), Const(-1))
+                return Pow(Const(self.left.name ** (-self.right.name)), Const(-1))
 
         if isinstance(self.left, Multiply):
             right_simplified = self.right.simplify(expand)
@@ -1278,50 +1352,68 @@ class Log(Func):
         - isinstance(self.base, Num)
     """
     name = 'log'
-    base: Const
+    base: Expr
     arg: Expr
 
-    def __init__(self, base: Const, arg: Expr) -> None:
+    def __init__(self, base: Expr, arg: Expr) -> None:
         try:
             if isinstance(arg, Const) and (arg.name == 0 or arg.name == 1):
-                raise LogZeroError
+                raise LogBaseError
             self.base = base
             super().__init__(arg)
-        except LogZeroError as error:
+        except LogBaseError as error:
             print(error.msg)
 
     def __str__(self) -> str:
-        if self.base.name == 'e':
+        if isinstance(self.base, Const) and self.base.name == 'e':
             return 'ln ( ' + str(self.arg) + ') '
         else:
             return 'log' + str(self.base) + '( ' + str(self.arg) + ') '
 
     def get_latex(self) -> str:
-        if self.base.name == 'e':
+        if isinstance(self.base, Const) and self.base.name == 'e':
             return '\\ln \\left( ' + self.arg.get_latex() + '\\right) '
         else:
             return '\\log_{' + self.base.get_latex() + '} \\left( ' + self.arg.get_latex() + '\\right) '
 
     def differentiate(self, respect_to: str) -> Expr:
-        if not isinstance(self.arg, Const):
-            if self.base.name == 'e':
-                return Multiply(self.arg.differentiate(respect_to), Pow(self.arg, Const(-1)))
+        if isinstance(self.base, Const):
+            if not isinstance(self.arg, Const):
+                if self.base.name == 'e':
+                    return Multiply(self.arg.differentiate(respect_to), Pow(self.arg, Const(-1)))
+                else:
+                    return Multiply(self.arg.differentiate(respect_to),
+                                    Pow(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1))
+                                    )
             else:
-                return Multiply(self.arg.differentiate(respect_to),
-                                Pow(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1))
-                                )
-        else:
-            # Then it is a constant!
-            return Const(0)
+                # Then it is a constant!
+                return Const(0)
+        return Multiply(Log(Const('e'), self.arg), Pow(Log(Const('e'), self.base), Const(-1))).differentiate(respect_to)
 
     def simplify(self, expand: bool) -> Expr:
-        if isinstance(self.arg, Const):
-            if self.arg.name == self.base.name:
-                return Const(1)
-            if self.arg.name == 1:
-                return Const(0)
+        if str(self.arg) == str(self.base):
+            return Const(1)
 
-        return Log(self.base, self.arg.simplify(expand))
+        if isinstance(self.arg, Const) and self.arg.name == 1:
+            return Const(0)
+
+        base_simplified = self.base.simplify(expand)
+
+        # logb(m * n) = logb(m) + logb(n)
+        if isinstance(self.arg, Multiply):
+            return Plus(Log(base_simplified, self.arg.left.simplify(expand)).simplify(expand),
+                        Log(base_simplified, self.arg.right.simplify(expand)).simplify(expand)).simplify(expand)
+
+        # logb(m ^ n) = n * logb(m)
+        if isinstance(self.arg, Pow):
+            return Multiply(self.arg.right.simplify(expand), Log(base_simplified, self.arg.left.simplify(expand)).simplify(expand)).simplify(expand)
+
+        if isinstance(base_simplified, Const):
+            return Log(base_simplified, self.arg.simplify(expand))
+        else:
+            # return ln(arg) / ln(base)
+            return Multiply(Log(Const('e'), self.arg.simplify(expand)).simplify(expand),
+                            Pow(Log(Const('e'), base_simplified).simplify(expand), Const(-1)).simplify(expand)).simplify(expand)
 
     def trig_simplify(self) -> Expr:
         return Log(self.base.trig_simplify(), self.arg.trig_simplify())
@@ -1403,7 +1495,7 @@ def get_arrangement_type(expr: Expr) -> tuple:  # TODO: TEST
     return ('Other', expr, Const(1), Const(1), None, None)
 
 
-class LogZeroError(Exception):
+class LogBaseError(Exception):
     """Raised when the user attempts to define log(0).
 
     Instance Attributes:
