@@ -230,7 +230,7 @@ def differentiate(input_text: str, variable: str = 'x') -> str:
             prev2 = None
             while str(curr) != str(prev2):
                 # print(prev2)
-                prev2, curr = curr, curr.simplify(expand=True)  # todo: toggle expand
+                prev2, curr = curr, curr.simplify(expand=False)  # todo: toggle expand
                 print('prev2: ' + str(prev2))
                 print('curr : ' + str(curr))
             # print(simplified)
@@ -279,9 +279,9 @@ def tester() -> None:
             while prompt.lower() in {'s', 'r', 't'}:
                 if prompt.lower() == 's':
                     prev = expr
-                    simplified = prev.simplify(expand=True)
+                    simplified = prev.simplify(expand=False)
                     print(prev)
-                    prev, simplified = simplified, simplified.simplify(expand=True)
+                    prev, simplified = simplified, simplified.simplify(expand=False)
                     print(simplified)
                     print(simplified.get_latex())
                     # visualization_runner(simplified)

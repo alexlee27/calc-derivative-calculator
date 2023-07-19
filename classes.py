@@ -1,4 +1,5 @@
 """Classes for mathematical expressions"""
+from __future__ import annotations
 from typing import *
 
 
@@ -6,19 +7,18 @@ from typing import *
 # x ^ e, x ^ pi, x ^ x works
 # Func ^ f(x) (e.g. ( ln ( e ) ) ^ x ) works
 # Func ^ Func (e.g. ( cos ( 1 ) ) ^ sin ( 1 ) ) works
-# todo: filter fractions in Multiply objects
+# filtered fractions in Multiply objects
 # todo: (-1) ^ x, -1 ^ x, -(1 ^ x); fix how input deals with negative signs with non-digits
 # todo: 0 ^ Func and 0 ^ f(x)
-
 # sorted by argument first for (trig) functions
 # implemented e ^ ln x = x simplification; a ^ (... * loga x * ...) = x ^ ... simplification (an O(n) algorithm that looks through all nodes in the exponent?)
 # implemented logx ( x )????
-# todo: use some kind of gcd algorithm for fraction simplification
+# used gcd for fraction simplification
 # created new method call 'trig_simplify'
 # made it so non-constants can be used in logarithm base
 # implemented logarithm rules
 # implemented something + ( -1 * something ) = 0 simplification
-# todo: a ^ (b + c) = a^b * a^c (where b + c can't be simplified)
+# implemented a ^ (b + c) = a^b * a^c (where b + c can't be simplified)
 
 
 class Expr:
@@ -32,22 +32,26 @@ class Expr:
         """Get the LaTeX code for the expression."""
         raise NotImplementedError
 
-    def differentiate(self, respect_to: str) -> Any:
+    def differentiate(self, respect_to: str) -> Expr:
         """Differentiate the expression."""
         raise NotImplementedError
 
-    def simplify(self, expand: bool) -> Any:
+    def simplify(self, expand: bool) -> Expr:
         """Simplify the expression.
         If expand is True, it will expand terms as well (e.g. expanding multinomials, distribution in multiplication).
         """
         return self
 
-    def rearrange(self) -> Any:
+    def rearrange(self) -> Expr:
         """Rearrange the expression."""
         return self
 
-    def trig_simplify(self) -> Any:
+    def trig_simplify(self) -> Expr:
         """Simplify any trigonometric functions."""
+        return self
+
+    def fractionify(self) -> Expr:
+        """Put any terms with negative exponents in the denominators of fractions."""
         return self
 
     def __lt__(self, other) -> bool:
@@ -185,7 +189,7 @@ class Expr:
                         return False
                 elif isinstance(self, Pow) and isinstance(other, Const):
                     return True
-                elif isinstance(self, Const) and isinstance(self, Pow):
+                elif isinstance(self, Const) and isinstance(other, Pow):
                     return False
                 # At this point, both Const or Const ^ Digit or Const ^ Non-digit
                 elif isinstance(self_base, Const) and isinstance(other_base, Const):
@@ -343,7 +347,19 @@ class Plus(BinOp):
 
         # a/b + c/d, where a, b, c, d are numbers
         # todo; continue implementing
-
+        if isinstance(self.left, Multiply) and isinstance(self.right, Multiply) and \
+            isinstance(self.left.left, Const) and isinstance(self.left.left.name, int) and \
+            isinstance(self.right.left, Const) and isinstance(self.right.left.name, int) and \
+            isinstance(self.left.right, Pow) and isinstance(self.right.right, Pow) and \
+            isinstance(self.left.right.left, Const) and isinstance(self.left.right.left.name, int) and \
+            isinstance(self.left.right.right, Const) and self.left.right.right.name == -1 and \
+            isinstance(self.right.right.left, Const) and isinstance(self.right.right.left.name, int) and \
+            isinstance(self.right.right.right, Const) and self.right.right.right.name == -1:
+            a, b, c, d = self.left.left.name, self.left.right.left.name, self.right.left.name, self.right.right.left.name
+            common_denom = lcm(b, d)
+            b_multiplier = common_denom // b
+            d_multiplier = common_denom // d
+            return Multiply(Const(a * b_multiplier + c * d_multiplier), Pow(Const(common_denom), Const(-1)))
 
 
         # Multiply + Multiply
@@ -461,6 +477,9 @@ class Plus(BinOp):
 
     def trig_simplify(self) -> Expr:
         return Plus(self.left.trig_simplify(), self.right.trig_simplify())
+
+    def fractionify(self) -> Expr:
+        return Plus(self.left.fractionify(), self.right.fractionify())
 
 
 def expr_to_list(obj: Expr, root: BinOp) -> list:
@@ -948,6 +967,57 @@ class Multiply(BinOp):
 
         return Multiply(self.left.trig_simplify(), self.right.trig_simplify())
 
+    def fractionify(self) -> Expr:
+        numerator, denominator = filter_neg_powers(self)
+        if denominator:
+            return Multiply(numerator, Pow(denominator, Const(-1)))
+        return numerator
+
+
+def filter_neg_powers(expr: Expr) -> tuple[Expr, Optional[Expr]]:
+    """Return a tuple in the form (numerator, denominator), where numerator is the modified expr object with all
+    Pows with negative exponents removed, and denominator is an Expr object consisting of terms that should be in the
+    denominator.
+    """
+    if not isinstance(expr, Multiply):
+        if isinstance(expr, Pow):
+            negative, abs_of_exponent = is_minus(expr.right)
+            if negative:
+                if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
+                    return Const(1), expr.left
+                return Const(1), Pow(expr.left, abs_of_exponent)
+        return expr, None
+    else:
+        left_numer, left_denom = filter_neg_powers(expr.left)
+        right_numer, right_denom = filter_neg_powers(expr.right)
+        if left_denom and right_denom:
+            if isinstance(left_numer, Const) and left_numer.name == 1:
+                return right_numer, Multiply(left_denom, right_denom)
+            if isinstance(right_numer, Const) and right_numer.name == 1:
+                return left_numer, Multiply(left_denom, right_denom)
+            return Multiply(left_numer, right_numer), Multiply(left_denom, right_denom)
+        elif left_denom:
+            if isinstance(left_numer, Const) and left_numer.name == 1:
+                return right_numer, left_denom
+            if isinstance(right_numer, Const) and right_numer.name == 1:
+                return left_numer, left_denom
+            return Multiply(left_numer, right_numer), left_denom
+        elif right_denom:
+            if isinstance(left_numer, Const) and left_numer.name == 1:
+                return right_numer, right_denom
+            if isinstance(right_numer, Const) and right_numer.name == 1:
+                return left_numer, right_denom
+            return Multiply(left_numer, right_numer), right_denom
+        # At this point, not left_denom and not right_denom
+        else:
+            if isinstance(left_numer, Const) and left_numer.name == 1:
+                return right_numer, None
+            if isinstance(right_numer, Const) and right_numer.name == 1:
+                return left_numer, None
+            return Multiply(left_numer, right_numer), None
+
+
+
 
 def gcd(x, y) -> int:
     """Compute the greatest common divisor of x and y.
@@ -957,11 +1027,12 @@ def gcd(x, y) -> int:
     else:
         return gcd(y, x % y)
 
+
 def lcm(x, y) -> int:
     """Compute the lowest common multiple of x and y.
     """
     d = gcd(x, y)
-    return (x // d) * (y // d)
+    return x * y // d
 
 
 def get_power_tree(i: int, lst: list, power_tree: Expr) -> tuple:
@@ -1072,9 +1143,6 @@ class Const(Num):
     def differentiate(self, respect_to: str) -> Expr:
         return Const(0)
 
-    def simplify(self, expand: bool) -> Expr:
-        return self
-
 
 class Pow(BinOp):
     """Represents the binary operation of exponentiation (power).
@@ -1101,7 +1169,7 @@ class Pow(BinOp):
         if isinstance(self.left, Trig):
             return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
         if isinstance(self.left, Log):
-            if self.left.base.name == 'e':
+            if isinstance(self.left.base, Const) and self.left.base.name == 'e':
                 return '{ \\ln } ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
             return '{\\log_{ ' + self.left.base.get_latex() + '} } ' + '^' + '{ ' + self.right.get_latex() + '} ' \
                 + '\\left( ' + self.left.arg.get_latex() + '\\right) '
@@ -1186,6 +1254,14 @@ class Pow(BinOp):
             if log_arg:
                 return Pow(log_arg.simplify(expand), new_exponent.simplify(expand)).simplify(expand)
 
+        # a ^ (b + c) = a^b * a^c (where b + c can't be simplified)
+        if isinstance(self.right, Plus):
+            base_simplified = self.left.simplify(expand)
+            exponent_simplified = self.right.simplify(expand)
+            if str(exponent_simplified) == str(self.right):
+                return Multiply(Pow(base_simplified, self.right.left).simplify(expand), Pow(base_simplified, self.right.right).simplify(expand)).simplify(expand)
+            return Pow(base_simplified, exponent_simplified)
+
         return Pow(self.left.simplify(expand), self.right.simplify(expand))
 
     def rearrange(self) -> Expr:
@@ -1193,6 +1269,9 @@ class Pow(BinOp):
 
     def trig_simplify(self) -> Expr:
         return Pow(self.left.trig_simplify(), self.right.trig_simplify())
+
+    def fractionify(self) -> Expr:
+        return Pow(self.left.fractionify(), self.right.fractionify())
 
 
 def choose(n, k):
@@ -1239,9 +1318,6 @@ class Var(Num):
             return Const(1)
         else:
             return Const(0)
-
-    def simplify(self, expand: bool) -> Expr:
-        return self
 
 
 class Trig(Func):
@@ -1339,6 +1415,9 @@ class Trig(Func):
     def trig_simplify(self) -> Expr:
         return Trig(self.name, self.arg.trig_simplify())
 
+    def fractionify(self) -> Expr:
+        return Trig(self.name, self.arg.fractionify())
+
 
 class Log(Func):
     """Represents a logarithmic function.
@@ -1417,6 +1496,9 @@ class Log(Func):
 
     def trig_simplify(self) -> Expr:
         return Log(self.base.trig_simplify(), self.arg.trig_simplify())
+
+    def fractionify(self) -> Expr:
+        return Log(self.base.fractionify(), self.arg.fractionify())
 
 
 def process_to_list(obj: Expr) -> list[tuple[str, int | float | str]]:
