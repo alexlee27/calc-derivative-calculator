@@ -13,14 +13,124 @@ class ParenthesesError(Exception):
     msg = 'The parentheses are mismatched. Please check your input and try again!'
 
 
+class LogNoBaseError(Exception):
+    """Raised when the user does not define the base of a logarithm that is not the natural logarithm (ln).
+
+    Instance Attributes:
+        - msg: the error message
+    """
+    msg = 'Please define the base of the logarithm! Type the input in the form log_(base)(argument).'
+
+
+class InvalidInputError(Exception):
+    """Raised when the user enters invalid math input.
+
+    Instance Attributes:
+        - msg: the error message
+    """
+    msg = 'Please check your input.'
+
+
+def tokenizer(text: str) -> list[str]:
+    """Converts a string math input into a list of tokens that can be processed by the parser function."""
+    names_2_char = {'ln', 'pi'}
+    names_3_char = {'sin', 'cos', 'tan', 'csc', 'sec', 'cot', 'log'}
+    names_6_char = {'arcsin', 'arccos', 'arctan'}
+
+    bin_operators = {'+', '*', '/', '^'}
+    result = []
+    i = 0
+    prev_type = None
+    logs_and_open_paren = []
+    while i < len(text):
+        if i + 2 <= len(text) and text[i:i+2] in names_2_char:
+            if prev_type in {')', 'digit', 'letter'}:
+                result.append('*')
+            result.append(text[i:i+2])
+            if result[-1] == 'ln':
+                prev_type = 'function'
+            else:  # pi
+                prev_type = 'letter'
+            i += 1
+        elif i + 3 <= len(text) and text[i:i+3] in names_3_char:
+            if prev_type in {')', 'digit', 'letter'}:
+                result.append('*')
+            result.append(text[i:i+3])
+            prev_type = 'function'
+            if result[-1] == 'log':
+                if text[i + 3] == '_':
+                    i += 3
+                    logs_and_open_paren.append('log')
+                else:
+                    raise LogNoBaseError
+            else:
+                i += 2
+        elif i + 6 <= len(text) and text[i:i+6] in names_6_char:
+            if prev_type in {')', 'digit', 'letter'}:
+                result.append('*')
+            result.append(text[i:i + 6])
+            prev_type = 'function'
+            i += 5
+        else:
+            if text[i] in bin_operators:
+                result.append(text[i])
+                prev_type = 'operator'
+            elif text[i] == '-':
+                if prev_type in {'digit', 'letter'}:
+                    result.append(text[i])
+                prev_type = '-'
+            elif text[i] == '(':
+                if prev_type in {')', 'digit', 'letter'}:
+                    if len(logs_and_open_paren) > 0 and logs_and_open_paren[-1] == 'log':
+                        logs_and_open_paren.pop()
+                    else:
+                        result.append('*')
+                elif prev_type == '-':
+                    result.append('-1')
+                    result.append('*')
+                result.append(text[i])
+                prev_type = '('
+                logs_and_open_paren.append('(')
+            elif text[i] == ')':
+                result.append(text[i])
+                prev_type = ')'
+                assert logs_and_open_paren[-1] == '('
+                logs_and_open_paren.pop()
+            elif (ord('A') <= ord(text[i]) <= ord('Z')) or (ord('a') <= ord(text[i]) <= ord('z')):
+                if prev_type in {')', 'digit', 'letter'}:
+                    result.append('*')
+                elif prev_type == '-':
+                    result.append('-1')
+                    result.append('*')
+                result.append(text[i])
+                prev_type = 'letter'
+            elif ord('0') <= ord(text[i]) <= ord('9'):
+                token_accumlator = ''
+                if prev_type in {')', 'letter'}:
+                    result.append('*')
+                elif prev_type == '-':
+                    token_accumlator = '-'
+                token_accumlator += text[i]
+                while i + 1 < len(text) and ord('0') <= ord(text[i + 1]) <= ord('9'):
+                    token_accumlator += text[i + 1]
+                    i += 1
+                result.append(token_accumlator)
+                prev_type = 'digit'
+            else:
+                raise InvalidInputError
+        i += 1
+
+    return result
+
+
 def string_to_expr(text: str, variables: set[str]) -> Optional[Expr]:
     """A parser function that converts a string math input to an Expr binary tree.
     Returns None if there is an error.
 
-    Involves the Shunting yard algorithm (https://en.wikipedia.org/wiki/Shunting_yard_algorithm).
+    Involves using the Shunting yard algorithm (https://en.wikipedia.org/wiki/Shunting_yard_algorithm).
     """
     try:
-        input_array = text.split(' ')
+        input_array = tokenizer(text)
         # Note that output_stack only contains Expr objects
         output_stack = []
         operator_stack = []
@@ -31,6 +141,9 @@ def string_to_expr(text: str, variables: set[str]) -> Optional[Expr]:
                 output_stack.append(str_to_num(token, variables))
 
             elif typ == 'Func':
+                operator_stack.append(token)
+
+            elif typ == 'LogNoBase':
                 operator_stack.append(token)
 
             elif typ == 'BinOp':
@@ -60,6 +173,18 @@ def string_to_expr(text: str, variables: set[str]) -> Optional[Expr]:
                             tree = str_to_func(operator, subtree, variables)
                             output_stack.append(tree)
 
+                        elif operator_type == 'LogNoBase':
+                            # Keep the logarithm in the operator stack, but with the base augmented.
+                            subtree = output_stack.pop()
+                            new_operator = (operator_stack.pop(), subtree)
+                            operator_stack.append(new_operator)
+
+                        elif operator_type == 'LogWithBase':
+                            base = operator[1]
+                            exponent = output_stack.pop()
+                            tree = get_log_custom_base(base, exponent)
+                            output_stack.append(tree)
+
                         elif operator_type == 'BinOp':
                             subtree1 = output_stack.pop()
                             subtree2 = output_stack.pop()
@@ -72,8 +197,19 @@ def string_to_expr(text: str, variables: set[str]) -> Optional[Expr]:
                         subtree = output_stack.pop()
                         tree = str_to_func(operator_stack.pop(), subtree, variables)
                         output_stack.append(tree)
+                    elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogNoBase':
+                        # Keep the logarithm in the operator stack, but with the base augmented.
+                        subtree = output_stack.pop()
+                        new_operator = (operator_stack.pop(), subtree)
+                        operator_stack.append(new_operator)
+                    elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogWithBase':
+                        base = operator_stack.pop()[1]
+                        exponent = output_stack.pop()
+                        tree = get_log_custom_base(base, exponent)
+                        output_stack.append(tree)
+
                 except IndexError:
-                    raise ParenthesesError
+                    print('IndexError')
         while len(operator_stack) > 0:
             if operator_stack[-1] == '(':
                 raise ParenthesesError
@@ -84,6 +220,18 @@ def string_to_expr(text: str, variables: set[str]) -> Optional[Expr]:
             if operator_type == 'Func':
                 subtree = output_stack.pop()
                 tree = str_to_func(operator, subtree, variables)
+                output_stack.append(tree)
+
+            elif operator_type == 'LogNoBase':
+                # Keep the logarithm in the operator stack, but with the base augmented.
+                subtree = output_stack.pop()
+                new_operator = (operator_stack.pop(), subtree)
+                operator_stack.append(new_operator)
+
+            elif operator_type == 'LogWithBase':
+                base = operator[1]
+                exponent = output_stack.pop()
+                tree = get_log_custom_base(base, exponent)
                 output_stack.append(tree)
 
             elif operator_type == 'BinOp':
@@ -100,23 +248,28 @@ def string_to_expr(text: str, variables: set[str]) -> Optional[Expr]:
     except ParenthesesError as error:
         print(error.msg)
         return None
-    except LogBaseVarError as error:
+    except LogNoBaseError as error:
         print(error.msg)
         return None
 
 
-def token_type(token: str) -> str:
+def token_type(token: Any) -> str:
     """Outputs 'Num', 'BinOp', 'Func', '(', or ')'.
 
     Preconditions:
-        - token is a valid mathematical input
+        - token is a valid operator
     """
     if token == '(' or token == ')':
         return token
     if token in {'^', '*', '/', '+', '-'}:
         return 'BinOp'
-    if 'log' in token or 'ln' in token or token in Trig.VALID_NAMES:
+    if token == 'ln' or token in Trig.VALID_NAMES:
+        # originally 'ln' in token
         return 'Func'
+    elif token == 'log':
+        return 'LogNoBase'
+    elif isinstance(token, tuple) and token[0] == 'log':
+        return 'LogWithBase'
     else:
         return 'Num'
 
@@ -181,16 +334,18 @@ def str_to_func(token: str, arg: Expr, variables: set[str]) -> Func:
     """Converts a string token into a Num object.
 
     Preconditions:
-        - 'log' in token or 'ln' in token or token in Trig.VALID_NAMES
+        - 'ln' in token or token in Trig.VALID_NAMES
     """
     if 'ln' in token:
         return Log(Const('e'), arg)
-    if 'log' in token:
-        base_object = string_to_expr(token[3:], variables)
-        return Log(base_object, arg)
     if token in Trig.VALID_NAMES:
         return Trig(token, arg)
 
+
+def get_log_custom_base(base: Expr, arg: Expr) -> Expr:
+    """Return a Log object with the input base and argument.
+    """
+    return Log(base, arg)
 
 def main() -> None:
     """The main function of this file.
@@ -274,6 +429,7 @@ def tester() -> None:
         variable = input('Enter the name of the variable to differentiate with respect to: ')
         expr = string_to_expr(infix_expression, {variable})
         print(expr)
+        print(expr.get_latex())
         if expr is not None:
             prompt = input('\'s\' for simplifying, \'r\' for rearranging, \'t\' for trig simplifying')
             while prompt.lower() in {'s', 'r', 't'}:

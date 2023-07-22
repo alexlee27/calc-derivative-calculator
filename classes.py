@@ -1017,8 +1017,6 @@ def filter_neg_powers(expr: Expr) -> tuple[Expr, Optional[Expr]]:
             return Multiply(left_numer, right_numer), None
 
 
-
-
 def gcd(x, y) -> int:
     """Compute the greatest common divisor of x and y.
     """
