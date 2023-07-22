@@ -4,20 +4,34 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE-edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <title>Calculus Derivative Calculator</title>
 </head>
 <body>
-    <form action="/differentiate" method="post">
-      <label for="input_text">Enter a mathematical expression to differentiate:</label>
-      <input type="text" id="input_text" name="input_text"><br><br>
-      <input type="submit" value="Differentiate!">
-    </form>
-    <div>
-        {% if result %}
-            $${{ result }}$$
-        {% endif %}
+    <div id="input-preview-box">
+        <p id="input-preview"></p>
     </div>
-    <script type="text/javascript" src="{{ url_for('static', filename='index.js')}}"></script>
+
+    <form id="differentiate">
+        <input type="text" placeholder="Enter an expression to differentiate..." id="input-text" name="input_text">
+        <input type="checkbox" id="expand" name="expand" value="false" onclick="toggleExpandCheckbox()">
+        <label for="expand">Expand?</label>
+        <input type="submit" value="Differentiate!">
+    </form>
+
+    <div id="input-simplified-box">
+        <p id="input-simplified"></p>
+    </div>
+
+    <div id="button-box">
+
+    </div>
+
+    <div id="differentiated-box">
+        <p id="differentiated-result"></p>
+    </div>
+    <script src="../static/index.js"></script>
 </body>
 </html>

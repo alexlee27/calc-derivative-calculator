@@ -19,6 +19,8 @@ from typing import *
 # implemented logarithm rules
 # implemented something + ( -1 * something ) = 0 simplification
 # implemented a ^ (b + c) = a^b * a^c (where b + c can't be simplified)
+# todo: a + b/c, a/b + c
+# todo: detect a/b as digit
 
 
 class Expr:
@@ -135,7 +137,7 @@ class Expr:
                     return False
                 # At this point, self_coefficient == other_coefficient:
             elif self_type == 'Other':
-                ...  # todo: implement
+                pass
             elif self_type == 'Non-digit':
                 print('inside __lt__')
                 self_list = process_to_list(self_base)
@@ -197,10 +199,11 @@ class Expr:
                         return True
                     elif self_base.name > other_base.name:
                         return False
-                    elif self_exponent < other_exponent:
-                        return True
-                    elif self_exponent > other_exponent:
-                        return False
+                    if isinstance(self, Pow):
+                        if self_exponent < other_exponent:
+                            return True
+                        elif self_exponent > other_exponent:
+                            return False
 
 
 
@@ -346,7 +349,6 @@ class Plus(BinOp):
                             self.left.right.simplify(expand)).simplify(expand)
 
         # a/b + c/d, where a, b, c, d are numbers
-        # todo; continue implementing
         if isinstance(self.left, Multiply) and isinstance(self.right, Multiply) and \
             isinstance(self.left.left, Const) and isinstance(self.left.left.name, int) and \
             isinstance(self.right.left, Const) and isinstance(self.right.left.name, int) and \

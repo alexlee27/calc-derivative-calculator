@@ -4,7 +4,16 @@ from classes import *
 from tree_visualization import *
 
 
-class ParenthesesError(Exception):
+class CustomError(Exception):
+    """A class for custom errors.
+
+    Instance Attributes:
+        - msg: the error message
+    """
+    msg = ''
+
+
+class ParenthesesError(CustomError):
     """Raised when there is an invalid input of parentheses.
 
     Instance Attributes:
@@ -13,7 +22,7 @@ class ParenthesesError(Exception):
     msg = 'The parentheses are mismatched. Please check your input and try again!'
 
 
-class LogNoBaseError(Exception):
+class LogNoBaseError(CustomError):
     """Raised when the user does not define the base of a logarithm that is not the natural logarithm (ln).
 
     Instance Attributes:
@@ -22,7 +31,7 @@ class LogNoBaseError(Exception):
     msg = 'Please define the base of the logarithm! Type the input in the form log_(base)(argument).'
 
 
-class InvalidInputError(Exception):
+class InvalidInputError(CustomError):
     """Raised when the user enters invalid math input.
 
     Instance Attributes:
@@ -123,9 +132,9 @@ def tokenizer(text: str) -> list[str]:
     return result
 
 
-def string_to_expr(text: str, variables: set[str]) -> Optional[Expr]:
+def string_to_expr(text: str, variables: set[str]) -> Expr | CustomError:
     """A parser function that converts a string math input to an Expr binary tree.
-    Returns None if there is an error.
+    Returns the Exception object if there is an error.
 
     Involves using the Shunting yard algorithm (https://en.wikipedia.org/wiki/Shunting_yard_algorithm).
     """
@@ -209,7 +218,7 @@ def string_to_expr(text: str, variables: set[str]) -> Optional[Expr]:
                         output_stack.append(tree)
 
                 except IndexError:
-                    print('IndexError')
+                    raise InvalidInputError
         while len(operator_stack) > 0:
             if operator_stack[-1] == '(':
                 raise ParenthesesError
@@ -242,15 +251,8 @@ def string_to_expr(text: str, variables: set[str]) -> Optional[Expr]:
 
         # Outside the for loop
         return output_stack.pop()
-    except IndexError:
-        print('There are errors in your input. Please try again!')
-        return None
-    except ParenthesesError as error:
-        print(error.msg)
-        return None
-    except LogNoBaseError as error:
-        print(error.msg)
-        return None
+    except CustomError as error:
+        return error
 
 
 def token_type(token: Any) -> str:
@@ -359,21 +361,37 @@ def main() -> None:
         if expr is not None:
             differentiated = expr.differentiate(variable)
             prev = differentiated
-            simplified = prev.simplify(expand)
+            simplified = prev.simplify(expand=False)
             while str(simplified) != str(prev):
                 print(prev)
-                prev, simplified = simplified, simplified.simplify(expand)
+                prev, simplified = simplified, simplified.simplify(expand=False)
             print(simplified)
             visualization_runner(simplified)
     print('Program is done')
 
 
-def differentiate(input_text: str, variable: str = 'x') -> str:
+def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[str, str]:
     """Differentiates the mathematical expression represented by input_text,
-    returns LaTeX code of the differentiated expression.
+    returns a tuple in the form (input_simplfied_latex, differentiated_latex)
     """
     expr = string_to_expr(input_text, {variable})
-    if expr is not None:
+    if isinstance(expr, Expr):
+        prev1 = None
+        curr = expr
+        # Simplifying input first
+        while str(curr) != str(prev1):
+            prev1, curr = curr, curr.rearrange()
+            print('prev1: ' + str(prev1))
+            print('curr : ' + str(curr))
+
+            prev2 = None
+            while str(curr) != str(prev2):
+                # print(prev2)
+                prev2, curr = curr, curr.simplify(expand=expand)  # todo: toggle expand
+                print('prev2: ' + str(prev2))
+                print('curr : ' + str(curr))
+        simplified_input = curr
+
         differentiated = expr.differentiate(variable)
         prev1 = None
         curr = differentiated
@@ -385,15 +403,26 @@ def differentiate(input_text: str, variable: str = 'x') -> str:
             prev2 = None
             while str(curr) != str(prev2):
                 # print(prev2)
-                prev2, curr = curr, curr.simplify(expand=False)  # todo: toggle expand
+                prev2, curr = curr, curr.simplify(expand=expand)  # todo: toggle expand
                 print('prev2: ' + str(prev2))
                 print('curr : ' + str(curr))
             # print(simplified)
         # todo: toggle below for graph
         # visualization_runner(curr)
-        return curr.get_latex()
-    else:
-        return '\\text{Error has occurred!}'
+        return simplified_input.get_latex(), curr.get_latex()
+    elif isinstance(expr, CustomError):
+        return '\\text{' + expr.msg + '}', ''
+
+
+def input_preview(input_text: str, variable: str = 'x') -> str:
+    """Returns the LaTeX code for input_text, provided it is valid.
+    """
+    expr = string_to_expr(input_text, {variable})
+    if isinstance(expr, Expr):
+        return expr.get_latex()
+    elif isinstance(expr, CustomError):
+        return '\\text{' + expr.msg + '}'
+
 
 def testing(input_text: str, exp: bool, variable: str = 'x') -> str:
     expr = string_to_expr(input_text, {variable})
