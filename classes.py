@@ -21,6 +21,8 @@ from typing import *
 # implemented a ^ (b + c) = a^b * a^c (where b + c can't be simplified)
 # todo: a + b/c, a/b + c
 # todo: detect a/b as digit
+# todo: log simplification
+#  todo: -x^3 -1 -1
 
 
 class Expr:
@@ -514,16 +516,17 @@ class Multiply(BinOp):
             left_latex = self.left.get_latex()
         if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
             return '\\displaystyle\\frac{ ' + left_latex + '}{ ' + self.right.left.get_latex() + '} '
-        if isinstance(self.right, Plus):
-            right_latex = '\\left( ' + self.right.get_latex() + '\\right) '
-        else:
-            right_latex = self.right.get_latex()
+
+        right_latex = self.right.get_latex()
+        if isinstance(self.right, Plus) or right_latex[0] == '-' or right_latex[0:15] == '\\displaystyle-':
+            right_latex = '\\left( ' + right_latex + '\\right) '
 
         # digit * not a digit
         if isinstance(self.left, Const) and (isinstance(self.left.name, int) or isinstance(self.left.name, float)):
             if not (isinstance(self.right, Const)
                     and (isinstance(self.right.name, int) or isinstance(self.right.name, float))):
                 if self.left.name == -1:
+
                     return '- ' + right_latex
                 else:
                     return left_latex + ' ' + right_latex
@@ -972,7 +975,10 @@ class Multiply(BinOp):
     def fractionify(self) -> Expr:
         numerator, denominator = filter_neg_powers(self)
         if denominator:
-            return Multiply(numerator, Pow(denominator, Const(-1)))
+            if isinstance(denominator, Const) and denominator.name == 1:
+                return numerator
+            else:
+                return Multiply(numerator, Pow(denominator, Const(-1)))
         return numerator
 
 
@@ -1164,8 +1170,8 @@ class Pow(BinOp):
         return '( ' + str(self.left) + ') ^ ( ' + str(self.right) + ') '
 
     def get_latex(self) -> str:
-        # if isinstance(self.right, Const) and self.right.name == -1:
-        #     return '\\displaystyle\\frac{1}{ ' + self.left.get_latex() + '} '
+        if isinstance(self.right, Const) and self.right.name == -1:
+            return '\\displaystyle\\frac{1}{ ' + self.left.get_latex() + '} '
         if isinstance(self.left, Trig):
             return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
         if isinstance(self.left, Log):
@@ -1178,9 +1184,6 @@ class Pow(BinOp):
             left_latex = '\\left( ' + self.left.get_latex() + '\\right) '
         else:
             left_latex = self.left.get_latex()
-        # minus, abs_val = is_minus(self.right)
-        # if minus:
-        #     return '\\displaystyle\\frac{1}{ { ' + left_latex + '}^{' + abs_val.get_latex() + '} } '
         return '{ ' + left_latex + '} ' + '^ { ' + self.right.get_latex() + '} '
 
     def differentiate(self, respect_to: str) -> Expr:
@@ -1268,6 +1271,40 @@ class Pow(BinOp):
         return Pow(self.left.rearrange(), self.right.rearrange())
 
     def trig_simplify(self) -> Expr:
+        if isinstance(self.left, Trig) and self.left.name in {'sin', 'cos', 'tan', 'csc', 'sec', 'cot'}:
+            negative, abs_of_exponent = is_minus(self.right)
+            if negative:
+                if self.left.name == 'sin':
+                    if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
+                        return Trig('csc', self.left.arg.trig_simplify())
+                    else:
+                        return Pow(Trig('csc', self.left.arg.trig_simplify()), abs_of_exponent)
+                elif self.left.name == 'cos':
+                    if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
+                        return Trig('sec', self.left.arg.trig_simplify())
+                    else:
+                        return Pow(Trig('sec', self.left.arg.trig_simplify()), abs_of_exponent)
+                elif self.left.name == 'tan':
+                    if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
+                        return Trig('cot', self.left.arg.trig_simplify())
+                    else:
+                        return Pow(Trig('cot', self.left.arg.trig_simplify()), abs_of_exponent)
+                elif self.left.name == 'csc':
+                    if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
+                        return Trig('sin', self.left.arg.trig_simplify())
+                    else:
+                        return Pow(Trig('sin', self.left.arg.trig_simplify()), abs_of_exponent)
+                elif self.left.name == 'sec':
+                    if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
+                        return Trig('cos', self.left.arg.trig_simplify())
+                    else:
+                        return Pow(Trig('cos', self.left.arg.trig_simplify()), abs_of_exponent)
+                elif self.left.name == 'cot':
+                    if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
+                        return Trig('tan', self.left.arg.trig_simplify())
+                    else:
+                        return Pow(Trig('tan', self.left.arg.trig_simplify()), abs_of_exponent)
+
         return Pow(self.left.trig_simplify(), self.right.trig_simplify())
 
     def fractionify(self) -> Expr:

@@ -85,8 +85,17 @@ def tokenizer(text: str) -> list[str]:
                 result.append(text[i])
                 prev_type = 'operator'
             elif text[i] == '-':
-                if prev_type in {'digit', 'letter'}:
-                    result.append(text[i])
+                if not (i + 1 < len(text) and ord('0') <= ord(text[i + 1]) <= ord('9')):
+                    if prev_type in {None, '('}:
+                        result.append('-1')
+                        result.append('*')
+                    else:
+                        result.append(text[i])
+                elif i + 1 < len(text) and ord('0') <= ord(text[i + 1]) <= ord('9'):
+                    if prev_type not in {None, '('}:
+                        result.append('+')
+                else:
+                    raise InvalidInputError
                 prev_type = '-'
             elif text[i] == '(':
                 if prev_type in {')', 'digit', 'letter'}:
@@ -94,9 +103,9 @@ def tokenizer(text: str) -> list[str]:
                         logs_and_open_paren.pop()
                     else:
                         result.append('*')
-                elif prev_type == '-':
-                    result.append('-1')
-                    result.append('*')
+                # elif prev_type == '-':
+                #     result.append('-1')
+                #     result.append('*')
                 result.append(text[i])
                 prev_type = '('
                 logs_and_open_paren.append('(')
@@ -108,9 +117,9 @@ def tokenizer(text: str) -> list[str]:
             elif (ord('A') <= ord(text[i]) <= ord('Z')) or (ord('a') <= ord(text[i]) <= ord('z')):
                 if prev_type in {')', 'digit', 'letter'}:
                     result.append('*')
-                elif prev_type == '-':
-                    result.append('-1')
-                    result.append('*')
+                # elif prev_type == '-':
+                #     result.append('-1')
+                #     result.append('*')
                 result.append(text[i])
                 prev_type = 'letter'
             elif ord('0') <= ord(text[i]) <= ord('9'):
@@ -172,53 +181,49 @@ def string_to_expr(text: str, variables: set[str]) -> Expr | CustomError:
                 operator_stack.append(token)
 
             else:  # typ == ')'
-                try:
-                    while operator_stack[-1] != '(':
-                        operator = operator_stack.pop()
-                        operator_type = token_type(operator)
+                while operator_stack[-1] != '(':
+                    operator = operator_stack.pop()
+                    operator_type = token_type(operator)
 
-                        if operator_type == 'Func':
-                            subtree = output_stack.pop()
-                            tree = str_to_func(operator, subtree, variables)
-                            output_stack.append(tree)
-
-                        elif operator_type == 'LogNoBase':
-                            # Keep the logarithm in the operator stack, but with the base augmented.
-                            subtree = output_stack.pop()
-                            new_operator = (operator_stack.pop(), subtree)
-                            operator_stack.append(new_operator)
-
-                        elif operator_type == 'LogWithBase':
-                            base = operator[1]
-                            exponent = output_stack.pop()
-                            tree = get_log_custom_base(base, exponent)
-                            output_stack.append(tree)
-
-                        elif operator_type == 'BinOp':
-                            subtree1 = output_stack.pop()
-                            subtree2 = output_stack.pop()
-                            tree = str_to_bin_op(operator, subtree2, subtree1)
-                            output_stack.append(tree)
-                    # top of operator_stack is now '('
-                    operator_stack.pop()  # discarding the '('
-
-                    if len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'Func':
+                    if operator_type == 'Func':
                         subtree = output_stack.pop()
-                        tree = str_to_func(operator_stack.pop(), subtree, variables)
+                        tree = str_to_func(operator, subtree, variables)
                         output_stack.append(tree)
-                    elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogNoBase':
+
+                    elif operator_type == 'LogNoBase':
                         # Keep the logarithm in the operator stack, but with the base augmented.
                         subtree = output_stack.pop()
                         new_operator = (operator_stack.pop(), subtree)
                         operator_stack.append(new_operator)
-                    elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogWithBase':
-                        base = operator_stack.pop()[1]
+
+                    elif operator_type == 'LogWithBase':
+                        base = operator[1]
                         exponent = output_stack.pop()
                         tree = get_log_custom_base(base, exponent)
                         output_stack.append(tree)
 
-                except IndexError:
-                    raise InvalidInputError
+                    elif operator_type == 'BinOp':
+                        subtree1 = output_stack.pop()
+                        subtree2 = output_stack.pop()
+                        tree = str_to_bin_op(operator, subtree2, subtree1)
+                        output_stack.append(tree)
+                # top of operator_stack is now '('
+                operator_stack.pop()  # discarding the '('
+
+                if len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'Func':
+                    subtree = output_stack.pop()
+                    tree = str_to_func(operator_stack.pop(), subtree, variables)
+                    output_stack.append(tree)
+                elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogNoBase':
+                    # Keep the logarithm in the operator stack, but with the base augmented.
+                    subtree = output_stack.pop()
+                    new_operator = (operator_stack.pop(), subtree)
+                    operator_stack.append(new_operator)
+                elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogWithBase':
+                    base = operator_stack.pop()[1]
+                    exponent = output_stack.pop()
+                    tree = get_log_custom_base(base, exponent)
+                    output_stack.append(tree)
         while len(operator_stack) > 0:
             if operator_stack[-1] == '(':
                 raise ParenthesesError
@@ -252,6 +257,9 @@ def string_to_expr(text: str, variables: set[str]) -> Expr | CustomError:
         # Outside the for loop
         return output_stack.pop()
     except CustomError as error:
+        return error
+    except Exception as error:
+        error = InvalidInputError()
         return error
 
 
@@ -390,9 +398,9 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
                 prev2, curr = curr, curr.simplify(expand=expand)  # todo: toggle expand
                 print('prev2: ' + str(prev2))
                 print('curr : ' + str(curr))
-        simplified_input = curr
+        simplified_input = curr.trig_simplify().fractionify()
 
-        differentiated = expr.differentiate(variable)
+        differentiated = simplified_input.differentiate(variable)
         prev1 = None
         curr = differentiated
         while str(curr) != str(prev1):
@@ -409,7 +417,8 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
             # print(simplified)
         # todo: toggle below for graph
         # visualization_runner(curr)
-        return simplified_input.get_latex(), curr.get_latex()
+        differentiated = curr.trig_simplify().fractionify()
+        return simplified_input.get_latex(), differentiated.get_latex()
     elif isinstance(expr, CustomError):
         return '\\text{' + expr.msg + '}', ''
 
