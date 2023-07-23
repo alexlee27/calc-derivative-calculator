@@ -6,26 +6,36 @@ $(document).ready(function () {
         event.preventDefault();
 
         const input = $("#input-text").val();
-        const expand_bool = $("#expand").val();
+        const expandBool = $("#expand").val();
 
         $.ajax({
             type: "POST",
             url: "/differentiate",
-            data: { input_text: input, expand: expand_bool },
+            data: { input_text: input, expand: expandBool },
             dataType: "json",
             success: function (response) {
                 // Update page with result
-                var input_simplified = response.input_simplified;
-                var differentiated_result = response.differentiated_result;
+                let input_simplified = response.input_simplified;
+                let differentiated = response.differentiated;
+                let input_simplified_string = response.input_simplified_string;
+                let differentiated_string = response.differentiated_string;
+                let expand = response.expand;
 
                 input_simplified = "$$" + input_simplified + "$$";
-                differentiated_result = "$$" + differentiated_result + "$$";
+                differentiated = "$$" + differentiated + "$$";
 
-                const $input_simplified = $("#input-simplified");
-                const $differentiated_result = $("#differentiated-result");
+                const $inputSimplified = $("#input-simplified");
+                const $differentiatedResult = $("#differentiated-result");
+                const $simplifyOriginal = $("#simplify-original");
+                const $simplifyDifferentiated = $("#simplify-differentiated");
+                const $simplifyExpand = $("#simplify-expand");
 
-                $input_simplified.html(input_simplified)
-                $differentiated_result.html(differentiated_result);
+
+                $inputSimplified.html(input_simplified);
+                $differentiatedResult.html(differentiated);
+                $simplifyOriginal.val(input_simplified_string);
+                $simplifyDifferentiated.val(differentiated_string);
+                $simplifyExpand.val(expand);
 
                 MathJax.typesetPromise();
             },
@@ -45,12 +55,12 @@ $(document).ready(function () {
             dataType: "json",
             success: function (response) {
                 // Update page with result
-                var result = response.preview_result;
+                let result = response.preview_result;
                 result = "$$" + result + "$$";
 
-                const $pTag = $("#input-preview");
+                const $inputPreview = $("#input-preview");
 
-                $pTag.html(result);
+                $inputPreview.html(result);
 
                 MathJax.typesetPromise();
             },
@@ -59,7 +69,52 @@ $(document).ready(function () {
             }
         });
     });
-});
+
+    $("#simplify").submit(function (event) {
+        // Preventing submitting form by default
+        event.preventDefault();
+
+        const simplifyOriginal = $("#simplify-original").val();
+        const simplifyDifferentiated = $("#simplify-differentiated").val();
+        const simplifyExpand = $("#simplify-expand").val();
+
+        $.ajax({
+            type: "POST",
+            url: "/simplify",
+            data: { original: simplifyOriginal, differentiated: simplifyDifferentiated, expand: simplifyExpand },
+            dataType: "json",
+            success: function (response) {
+                // Update page with result
+                let input_simplified = response.original_simplified_latex;
+                let differentiated = response.differentiated_simplified_latex;
+                let input_simplified_string = response.original_simplified_str;
+                let differentiated_string = response.differentiated_simplified_str;
+                let expand = response.expand;
+
+                input_simplified = "$$" + input_simplified + "$$";
+                differentiated = "$$" + differentiated + "$$";
+
+                const $inputSimplified = $("#input-simplified");
+                const $differentiatedResult = $("#differentiated-result");
+                const $simplifyOriginal = $("#simplify-original");
+                const $simplifyDifferentiated = $("#simplify-differentiated");
+                const $simplifyExpand = $("#simplify-expand");
+
+
+                $inputSimplified.html(input_simplified);
+                $differentiatedResult.html(differentiated);
+                $simplifyOriginal.val(input_simplified_string);
+                $simplifyDifferentiated.val(differentiated_string);
+                $simplifyExpand.val(expand);
+
+                MathJax.typesetPromise();
+            },
+            error: function (xhr, status, error) {
+                console.log(error);
+            }
+        });
+    });
+})
 
 function toggleExpandCheckbox() {
   var checkbox = document.getElementById("expand");

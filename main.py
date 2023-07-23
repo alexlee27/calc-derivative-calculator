@@ -52,7 +52,9 @@ def tokenizer(text: str) -> list[str]:
     prev_type = None
     logs_and_open_paren = []
     while i < len(text):
-        if i + 2 <= len(text) and text[i:i+2] in names_2_char:
+        if text[i] == ' ':
+            pass
+        elif i + 2 <= len(text) and text[i:i+2] in names_2_char:
             if prev_type in {')', 'digit', 'letter'}:
                 result.append('*')
             result.append(text[i:i+2])
@@ -378,9 +380,10 @@ def main() -> None:
     print('Program is done')
 
 
-def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[str, str]:
+def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[str, str, str, str, str]:
     """Differentiates the mathematical expression represented by input_text,
-    returns a tuple in the form (input_simplfied_latex, differentiated_latex)
+    returns a tuple in the form (input_simplfied_latex, differentiated_latex, input_simplified_string,
+     differentiated_string, expand)
     """
     expr = string_to_expr(input_text, {variable})
     if isinstance(expr, Expr):
@@ -388,39 +391,41 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
         curr = expr
         # Simplifying input first
         while str(curr) != str(prev1):
-            prev1, curr = curr, curr.rearrange()
+            prev1, curr = curr, curr.rearrange().fractionify()
             print('prev1: ' + str(prev1))
             print('curr : ' + str(curr))
 
             prev2 = None
             while str(curr) != str(prev2):
                 # print(prev2)
-                prev2, curr = curr, curr.simplify(expand=expand)  # todo: toggle expand
+                prev2, curr = curr, curr.simplify(expand=expand)
                 print('prev2: ' + str(prev2))
                 print('curr : ' + str(curr))
         simplified_input = curr.trig_simplify().fractionify()
 
         differentiated = simplified_input.differentiate(variable)
+        print('differentiated')
         prev1 = None
         curr = differentiated
         while str(curr) != str(prev1):
-            prev1, curr = curr, curr.rearrange()
+            prev1, curr = curr, curr.rearrange().fractionify()
             print('prev1: ' + str(prev1))
             print('curr : ' + str(curr))
 
             prev2 = None
             while str(curr) != str(prev2):
                 # print(prev2)
-                prev2, curr = curr, curr.simplify(expand=expand)  # todo: toggle expand
+                prev2, curr = curr, curr.simplify(expand=expand)
                 print('prev2: ' + str(prev2))
                 print('curr : ' + str(curr))
             # print(simplified)
         # todo: toggle below for graph
         # visualization_runner(curr)
         differentiated = curr.trig_simplify().fractionify()
-        return simplified_input.get_latex(), differentiated.get_latex()
+        return simplified_input.get_latex(), differentiated.get_latex(), str(simplified_input), str(differentiated),\
+            str(expand).lower()
     elif isinstance(expr, CustomError):
-        return '\\text{' + expr.msg + '}', ''
+        return '\\text{' + expr.msg + '}', '', '', '', ''
 
 
 def input_preview(input_text: str, variable: str = 'x') -> str:
@@ -431,6 +436,30 @@ def input_preview(input_text: str, variable: str = 'x') -> str:
         return expr.get_latex()
     elif isinstance(expr, CustomError):
         return '\\text{' + expr.msg + '}'
+
+
+def simplify(input_text: str, expand: bool, variable: str = 'x') -> tuple[str, str]:
+    """Simplifies the expression, returns its LaTeX code and its string form."""
+    expr = string_to_expr(input_text, {variable})
+    if isinstance(expr, Expr):
+        prev1 = None
+        curr = expr
+        # Simplifying input first
+        while str(curr) != str(prev1):
+            prev1, curr = curr, curr.rearrange().fractionify()
+            print('prev1: ' + str(prev1))
+            print('curr : ' + str(curr))
+
+            prev2 = None
+            while str(curr) != str(prev2):
+                # print(prev2)
+                prev2, curr = curr, curr.simplify(expand=expand)
+                print('prev2: ' + str(prev2))
+                print('curr : ' + str(curr))
+        simplified_input = curr.trig_simplify().fractionify()
+        return simplified_input.get_latex(), str(simplified_input)
+    elif isinstance(expr, CustomError):
+        return '\\text{' + expr.msg + '}', ''
 
 
 def testing(input_text: str, exp: bool, variable: str = 'x') -> str:

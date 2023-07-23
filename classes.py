@@ -2,14 +2,13 @@
 from __future__ import annotations
 from typing import *
 
-
 # todo: run a bunch of test cases for Plus.simplify, Plus.rearrange, Multiply.simplify, and Multiply.rearrange
 # x ^ e, x ^ pi, x ^ x works
 # Func ^ f(x) (e.g. ( ln ( e ) ) ^ x ) works
 # Func ^ Func (e.g. ( cos ( 1 ) ) ^ sin ( 1 ) ) works
 # filtered fractions in Multiply objects
-# todo: (-1) ^ x, -1 ^ x, -(1 ^ x); fix how input deals with negative signs with non-digits
-# todo: 0 ^ Func and 0 ^ f(x)
+# (-1) ^ x, -1 ^ x, -(1 ^ x); fixed how input deals with negative signs with non-digits
+# 0 ^ Func and 0 ^ f(x) simplifies to 0
 # sorted by argument first for (trig) functions
 # implemented e ^ ln x = x simplification; a ^ (... * loga x * ...) = x ^ ... simplification (an O(n) algorithm that looks through all nodes in the exponent?)
 # implemented logx ( x )????
@@ -141,45 +140,45 @@ class Expr:
             elif self_type == 'Other':
                 pass
             elif self_type == 'Non-digit':
-                print('inside __lt__')
+                # print('inside __lt__')
                 self_list = process_to_list(self_base)
                 other_list = process_to_list(other_base)
-                print(str(self_base))
-                print(str(other_base))
-                print(self_list)
-                print(other_list)
+                # print(str(self_base))
+                # print(str(other_base))
+                # print(self_list)
+                # print(other_list)
 
                 i = 0
                 while i < len(self_list) and i < len(other_list):
                     if self_list[i][0] > other_list[i][0]:  # Note that 'b' > 'a' evaluates to True
-                        print('2nd one has higher priority')
+                        # print('2nd one has higher priority')
                         return True
                     elif self_list[i][0] == other_list[i][0]:  # Bases are the same; look at exponents
                         if (isinstance(self_list[i][1], int) or isinstance(self_list[i][1], float)) and \
                                 (isinstance(other_list[i][1], int) or isinstance(other_list[i][1], float)):
                             if self_list[i][1] < other_list[i][1]:  # Note that 2 < 3 evaluates to True
-                                print('2nd one has higher priority')
+                                # print('2nd one has higher priority')
                                 return True
                             if self_list[i][1] > other_list[i][1]:
-                                print('1st one has higher priority')
+                                # print('1st one has higher priority')
                                 return False
                         if isinstance(self_list[i][1], str) and isinstance(other_list[i][1], str):
                             if self_list[i][1] > other_list[i][1]:  # Note that 'b' > 'a' evaluates to True
-                                print('2nd one has higher priority')
+                                # print('2nd one has higher priority')
                                 return True
                             if self_list[i][1] < other_list[i][1]:
-                                print('1st one has higher priority')
+                                # print('1st one has higher priority')
                                 return False
                         if not isinstance(self_list[i][1], str) and isinstance(other_list[i][1], str):
                             # Alphabets take precedence over digits
-                            print('2nd one has higher priority')
+                            # print('2nd one has higher priority')
                             return True
                         if isinstance(self_list[i][1], str) and not isinstance(other_list[i][1], str):
                             # Alphabets take precedence over digits
-                            print('1st one has higher priority')
+                            # print('1st one has higher priority')
                             return False
                     elif self_list[i][0] < other_list[i][0]:
-                        print('1st one has higher priority')
+                        # print('1st one has higher priority')
                         return False
                     i += 1
             elif self_type == 'Digit':
@@ -346,7 +345,7 @@ class Plus(BinOp):
         if isinstance(self.left, Multiply) and isinstance(self.right, Multiply) and \
                 isinstance(self.left.right, Pow) and isinstance(self.right.right, Pow) and \
                 isinstance(self.left.right.right, Const) and self.left.right.right.name == -1 and \
-                str(self.left.right.left) == str(self.right.right.left):
+                str(self.left.right) == str(self.right.right):
             return Multiply(Plus(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(expand),
                             self.left.right.simplify(expand)).simplify(expand)
 
@@ -446,6 +445,23 @@ class Plus(BinOp):
                 if not expand:
                     return Multiply(factor_simplified, self.left.simplify(expand))
 
+        #       +
+        #      / \
+        #     +   A
+        #    / \
+        #  ...  A      (where A is an arbitrary arrangement type)
+        if isinstance(self.left, Plus) and not isinstance(self.right, Plus):
+            if get_arrangement_type(self.left.right)[0] == get_arrangement_type(self.right)[0]:
+                left_simplified = self.left.simplify(expand)
+                if str(left_simplified) != str(self.left):
+                    return Plus(left_simplified, self.right.simplify(expand)).simplify(expand)
+                else:
+                    lr_simplified = self.left.right.simplify(expand)
+                    r_simplified = self.right.simplify(expand)
+                    lr_and_r_simplified = Plus(lr_simplified, r_simplified).simplify(expand)
+                    if str(lr_and_r_simplified) != str(Plus(lr_simplified, r_simplified)):
+                        return Plus(self.left.left.simplify(expand), lr_and_r_simplified).simplify(expand)
+
         # # Multiply + Expr or Expr + Multiply
         # if isinstance(self.left, Multiply) or isinstance(self.right, Multiply):
         #     result = Plus(self.left.simplify(expand), self.right.simplify(expand)).simplify(expand)
@@ -465,12 +481,12 @@ class Plus(BinOp):
         lst = []
         for item in old_lst:
             lst.append(item.rearrange())
-        print([str(item) for item in lst])
+        # print([str(item) for item in lst])
 
         # Step 2: Sort the list
         lst.sort(reverse=True)
 
-        print([str(item) for item in lst])
+        # print([str(item) for item in lst])
 
         # Step 3: Insert all the objects into a new Plus binary tree
         tree = Plus(lst[0], lst[1])
@@ -626,6 +642,11 @@ class Multiply(BinOp):
                     if str(lr_and_r_simplified) != str(Multiply(lr_simplified, r_simplified)):
                         return Multiply(self.left.left.simplify(expand), lr_and_r_simplified).simplify(expand)
 
+        # # something * ( numerator / denominator) = (something * numerator) / denominator
+        # if isinstance(self.right, Multiply) and isinstance(self.right.right, Pow) and \
+        #         isinstance(self.right.right.right, Const) and self.right.right.right.name == -1:
+        #
+
         # Simplifying n / m (fractions)
         if isinstance(self.left, Const) and isinstance(self.left.name, int) and isinstance(self.right, Pow) and \
             isinstance(self.right.left, Const) and isinstance(self.right.left.name, int) and \
@@ -697,12 +718,12 @@ class Multiply(BinOp):
         lst = []
         for item in old_lst:
             lst.append(item.rearrange())
-        print([str(item) for item in lst])
+        # print([str(item) for item in lst])
 
         # Step 2: Sort the list
         lst.sort(reverse=True)
 
-        print([str(item) for item in lst])
+        # print([str(item) for item in lst])
 
         # Step 3: Insert all the objects into a new Multiply binary tree
         #      *
@@ -723,8 +744,7 @@ class Multiply(BinOp):
                     end_of_power.left = end_of_power.left.right
                 # if fractions:
                 #     return Multiply(power_tree, Pow(fractions, Const(-1)))
-                else:
-                    return power_tree
+                return power_tree
             elif get_arrangement_type(lst[i])[0] not in {'Non-digit', 'Digit'}:  # Is it a "Rest"?
                 rest_tree = lst[i]
                 i += 1
@@ -732,7 +752,7 @@ class Multiply(BinOp):
                 rest_tree, i = get_rest_tree(i, lst, rest_tree)
 
                 # Attach rest_tree to power_tree
-                if end_of_power:
+                if end_of_power and isinstance(end_of_power.left, Multiply):
                     end_of_power.left.left = rest_tree
                 else:  # If power_tree contains only 1 Power object
                     power_tree.left = rest_tree
@@ -770,6 +790,10 @@ class Multiply(BinOp):
                     # else:
                     return Multiply(digit_tree, power_tree)
             elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
+                if end_of_power and isinstance(end_of_power.left, Multiply):
+                    end_of_power.left = end_of_power.left.right
+                else: # If power_tree contains only 1 Power object
+                    power_tree = power_tree.right
                 non_digit_tree = lst[i]
                 i += 1
                 # Create non_digit_tree
@@ -790,6 +814,10 @@ class Multiply(BinOp):
                     # else:
                     return Multiply(Multiply(digit_tree, non_digit_tree), power_tree)
             else:  # Must be a digit tree
+                if end_of_power and isinstance(end_of_power.left, Multiply):
+                    end_of_power.left = end_of_power.left.right
+                else: # If power_tree contains only 1 Power object
+                    power_tree = power_tree.right
                 digit_tree = lst[i]
                 i += 1
                 # Create digit_tree
@@ -899,13 +927,18 @@ class Multiply(BinOp):
                     sin_exp_abs = abs(sin_exp)
                     cos_exp_abs = abs(cos_exp)
                     if sin_exp > 0 and cos_exp < 0:
+                        assert sin_exp_abs != 1
                         if sin_exp_abs > cos_exp_abs:
                             new_exp = sin_exp_abs - cos_exp_abs
                             if new_exp != 1:
-                                return Multiply(Pow(Trig('sin', arg), Const(new_exp)),
-                                                Pow(Trig('tan', arg), Const(cos_exp_abs)))
+                                left = Pow(Trig('sin', arg), Const(new_exp))
                             else:
-                                return Multiply(Trig('sin', arg), Pow(Trig('tan', arg), Const(cos_exp_abs)))
+                                left = Trig('sin', arg)
+                            if cos_exp_abs != 1:
+                                right = Pow(Trig('tan', arg), Const(cos_exp_abs))
+                            else:
+                                right = Trig('tan', arg)
+                            return Multiply(left, right)
                         elif sin_exp_abs < cos_exp_abs:
                             new_exp = cos_exp_abs - sin_exp_abs
                             if new_exp != 1:
@@ -916,13 +949,18 @@ class Multiply(BinOp):
                         else:  # sin_exp_abs == cos_exp_abs
                             return Pow(Trig('tan', arg), Const(sin_exp_abs))
                     if sin_exp < 0 and cos_exp > 0:
+                        assert cos_exp_abs != 1
                         if cos_exp_abs > sin_exp_abs:
                             new_exp = cos_exp_abs - sin_exp_abs
                             if new_exp != 1:
-                                return Multiply(Pow(Trig('cos', arg), Const(new_exp)),
-                                                Pow(Trig('cot', arg), Const(sin_exp_abs)))
+                                left = Pow(Trig('cos', arg), Const(new_exp))
                             else:
-                                return Multiply(Trig('cos', arg), Pow(Trig('cot', arg), Const(sin_exp_abs)))
+                                left = Trig('cos', arg)
+                            if sin_exp_abs != 1:
+                                right = Pow(Trig('cot', arg), Const(sin_exp_abs))
+                            else:
+                                right = Trig('cot', arg)
+                            return Multiply(left, right)
                         elif cos_exp_abs < sin_exp_abs:
                             new_exp = sin_exp_abs - cos_exp_abs
                             if new_exp != 1:
@@ -943,7 +981,10 @@ class Multiply(BinOp):
                     cos_exp_abs = abs(cos_exp)
                     if cos_exp < 0:
                         if cos_exp_abs > 1:
-                            return Multiply(Trig('tan', arg), Pow(Trig('sec', arg), Const(cos_exp_abs - 1)))
+                            if cos_exp_abs - 1 != 1:
+                                return Multiply(Trig('tan', arg), Pow(Trig('sec', arg), Const(cos_exp_abs - 1)))
+                            else:
+                                return Multiply(Trig('tan', arg), Trig('sec', arg))
                         elif cos_exp_abs == 1:
                             return Trig('tan', arg)
                         # Don't do anything for cos_exp_abs == 0
@@ -958,7 +999,10 @@ class Multiply(BinOp):
                     sin_exp_abs = abs(sin_exp)
                     if sin_exp < 0:
                         if sin_exp_abs > 1:
-                            return Multiply(Trig('cot', arg), Pow(Trig('csc', arg), Const(sin_exp_abs - 1)))
+                            if sin_exp_abs - 1 != 1:
+                                return Multiply(Trig('cot', arg), Pow(Trig('csc', arg), Const(sin_exp_abs - 1)))
+                            else:
+                                return Multiply(Trig('cot', arg), Trig('csc', arg))
                         elif sin_exp_abs == 1:
                             return Trig('cot', arg)
                         # Don't do anything for sin_exp_abs == 0
@@ -1217,6 +1261,11 @@ class Pow(BinOp):
                 return self.left.simplify(expand)
             if self.right.name == 0:
                 return Const(1)
+        if isinstance(self.left, Const):
+            if self.left.name == 1:
+                return Const(1)
+            if self.left.name == 0:
+                return Const(0)
 
         if expand:
             # Binomial expansion
