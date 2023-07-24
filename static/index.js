@@ -64,6 +64,7 @@ $(document).ready(function () {
 
                 MathJax.typesetPromise();
                 changeLaTeXStyle("input-preview");
+                isOverflown("input-preview");
             },
             error: function (xhr, status, error) {
                 console.log(error);
@@ -125,4 +126,24 @@ function changeLaTeXStyle(idName) {
     let div = document.getElementById(idName);
     let latex = div.getElementsByClassName("MathJax CtxtMenu_Attached_0")[0]
     latex.setAttribute("style", "font-size: 150%;");
+}
+
+function isOverflown(idName) {
+    let div = document.getElementById(idName);
+    if (div.scrollHeight > div.clientHeight) {
+        div.style.alignItems = "flex-start";
+//        div.style.overflow = "scroll";
+    }
+    if (div.scrollWidth > div.clientWidth) {
+        div.style.justifyContent = "flex-start";
+//        div.style.overflow = "scroll";
+    }
+    if (div.scrollHeight <= div.clientHeight) {
+        div.style.alignItems = "center";
+//        div.style.overflow = "auto";
+    }
+    if (div.scrollWidth <= div.clientWidth) {
+        div.style.justifyContent = "center";
+//        div.style.overflow = "auto";
+    }
 }

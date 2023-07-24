@@ -19,7 +19,7 @@ class ParenthesesError(CustomError):
     Instance Attributes:
         - msg: the error message
     """
-    msg = 'The parentheses are mismatched. Please check your input and try again!'
+    msg = 'Parentheses are mismatched. Please check your input and try again!'
 
 
 class LogNoBaseError(CustomError):
