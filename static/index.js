@@ -63,6 +63,7 @@ $(document).ready(function () {
                 $inputPreview.html(result);
 
                 MathJax.typesetPromise();
+                changeLaTeXStyle("input-preview");
             },
             error: function (xhr, status, error) {
                 console.log(error);
@@ -116,6 +117,12 @@ $(document).ready(function () {
 })
 
 function toggleExpandCheckbox() {
-  var checkbox = document.getElementById("expand");
-  checkbox.value = checkbox.checked;
+    let checkbox = document.getElementById("expand");
+    checkbox.value = checkbox.checked;
+}
+
+function changeLaTeXStyle(idName) {
+    let div = document.getElementById(idName);
+    let latex = div.getElementsByClassName("MathJax CtxtMenu_Attached_0")[0]
+    latex.setAttribute("style", "font-size: 150%;");
 }
