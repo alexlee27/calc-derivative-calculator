@@ -75,20 +75,19 @@ $(document).ready(function () {
         event.preventDefault();
 
         const simplifyOriginal = $("#simplify-original").val();
-        const simplifyDifferentiated = $("#simplify-differentiated").val();
         const simplifyExpand = $("#simplify-expand").val();
 
         $.ajax({
             type: "POST",
-            url: "/simplify",
-            data: { original: simplifyOriginal, differentiated: simplifyDifferentiated, expand: simplifyExpand },
+            url: "/differentiate",
+            data: { input_text: simplifyOriginal, expand: simplifyExpand },
             dataType: "json",
             success: function (response) {
                 // Update page with result
-                let input_simplified = response.original_simplified_latex;
-                let differentiated = response.differentiated_simplified_latex;
-                let input_simplified_string = response.original_simplified_str;
-                let differentiated_string = response.differentiated_simplified_str;
+                let input_simplified = response.input_simplified;
+                let differentiated = response.differentiated;
+                let input_simplified_string = response.input_simplified_string;
+                let differentiated_string = response.differentiated_string;
                 let expand = response.expand;
 
                 input_simplified = "$$" + input_simplified + "$$";

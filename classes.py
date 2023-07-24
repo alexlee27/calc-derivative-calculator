@@ -364,6 +364,17 @@ class Plus(BinOp):
             d_multiplier = common_denom // d
             return Multiply(Const(a * b_multiplier + c * d_multiplier), Pow(Const(common_denom), Const(-1)))
 
+        # if not expand:
+        #     # something1 / expr1 + something2 / expr2 = (something1 * expr2 + something2 * expr1) / (expr1 * expr2)
+        #     if isinstance(self.left, Multiply) and isinstance(self.right, Multiply) and \
+        #             isinstance(self.left.right, Pow) and isinstance(self.right.right, Pow) and \
+        #             isinstance(self.left.right.right, Const) and self.left.right.right.name == -1 and \
+        #             isinstance(self.right.right.right, Const) and self.right.right.right.name == -1:
+        #         expr1 = self.left.right.left.simplify(expand)
+        #         expr2 = self.right.right.left.simplify(expand)
+        #         return Multiply(Plus(Multiply(self.left.left.simplify(expand), expr2).simplify(expand),
+        #                              Multiply(self.right.left.simplify(expand), expr1)),
+        #                         Pow(Multiply(expr1, expr2).simplify(expand), Const(-1)).simplify(expand))
 
         # Multiply + Multiply
         if isinstance(self.left, Multiply) and isinstance(self.right, Multiply):
