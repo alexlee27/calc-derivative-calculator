@@ -1,46 +1,93 @@
 @import url('https://fonts.googleapis.com/css2?family=Karla:wght@400;700&display=swap');
 
+h1 {
+    font-size: 50px;
+}
+
+h2 {
+    font-size: 25px;
+}
+
+* {
+    color: #1e3323;
+}
+
 body {
     display: flex;
-    background-color: #cadbce;
-    font-family: 'Karla', sans-serif;
+    background-color: #bfdbc5;
     display: flex;
     flex-direction: row;
     width: 100vw;
-    height: 100vh;
     margin: 0px;
+    font-family: 'Karla', sans-serif;
+    font-size: 16px;
 }
+
 
 body > div {
     border: 5px solid black;
-    width: 20vw;
+    width: 20%;
 }
+
 body > #middle-column {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    width: 60vw;
+    width: 60%;
+    overflow: hidden;
     padding: 20px;
 }
 
-body > #middle-column > #input-preview-box {
-
-}
 
 body > #middle-column > #input-preview {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #dfe8e1;
-    height: 200px;
-    width: 50vw;
-    margin: 10px;
+    background-color: #ebf5ed;
+    height: 150px;
+    width: 100%;
     padding: 15px;
+    margin-bottom: 20px;
     overflow: scroll;
+    box-sizing: border-box;
+}
+
+body > #middle-column > #differentiate {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    height: 40px;
+    justify-content: space-between;
+}
+
+
+
+body > #middle-column > #differentiate > input {
+    font-family: 'Karla', sans-serif;
+    font-size: 16px;
+    border: 0;
+}
+
+body > #middle-column > #differentiate > #expand {
+    width: auto;
+}
+
+body > #middle-column > #differentiate > #input-text {
+    width: 70%;
+    height: 100%;
+}
+
+body > #middle-column > #differentiate > #submit-button {
+    width: 17%;
+    height: 100%;
+    font-weight: bold;
+    color: white;
+    background-color: #d97736;
 }
 
 body > #middle-column > #input-preview > mjx-container {
     margin: 0px;
-    color: #2a3b2e;
+    color: #2c4531;
 }

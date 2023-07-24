@@ -20,20 +20,20 @@
 
         <h2>Input preview</h2>
         <p>If the entire input doesn't appear, try scrolling</p>
-        <div id="input-preview"></div>
+        <div id="input-preview" class="latex-box"></div>
 
 
         <form id="differentiate">
             <input type="text" placeholder="Enter an expression to differentiate..." id="input-text" name="input_text">
             <input type="checkbox" id="expand" name="expand" value="false" onclick="toggleExpandCheckbox()">
-            <label for="expand">Expand?</label>
-            <input type="submit" value="Differentiate!">
+            <label for="expand" id="expand-text">Expand?</label>
+            <input type="submit" id="submit-button" value="Differentiate!">
         </form>
 
         <div id="input-simplified-box">
             <h2>Original expression</h2>
             <p>Rearranged and simplified:</p>
-            <p id="input-simplified"></p>
+            <p id="input-simplified" class="latex-box"></p>
         </div>
 
         <div id="button-box">
@@ -51,7 +51,7 @@
               <p>Lorem ipsum...</p>
             </div>
             <p>Rearranged and simplified:</p>
-            <p id="differentiated-result"></p>
+            <p id="differentiated-result" class="latex-box"></p>
         </div>
     </div>
 
