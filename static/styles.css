@@ -19,19 +19,27 @@ p {
 
 body {
     display: flex;
-    background-color: #bfdbc5;
-    display: flex;
-    flex-direction: row;
-    width: 100vw;
-    margin: 0px;
+    flex-direction: column;
     font-family: 'Karla', sans-serif;
     font-size: 18px;
+    width: 100vw;
+    margin: 0px;
 }
 
+#menu {
+    background-color: #a9ccb1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 150px;
+}
 
-body > div {
-    border: 5px solid black;
-    width: 20%;
+#main-content {
+    display: flex;
+    background-color: #bfdbc5;
+    flex-direction: row;
+    width: 100%;
+    margin: 0px;
 }
 
 #middle-column {
@@ -43,6 +51,15 @@ body > div {
     overflow: hidden;
     padding: 0;
     margin: 0;
+}
+
+#main-content > div {
+    /*border: 5px solid black;*/
+}
+
+#left-column, #right-column {
+    width: 20%;
+    background-color: #a9ccb1;
 }
 
 #upper-section, #lower-section {
