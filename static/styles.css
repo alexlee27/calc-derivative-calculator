@@ -5,7 +5,12 @@ h1 {
 }
 
 h2 {
-    font-size: 25px;
+    font-size: 35px;
+    margin: 10px;
+}
+
+p {
+    margin: 10px;
 }
 
 * {
@@ -20,7 +25,7 @@ body {
     width: 100vw;
     margin: 0px;
     font-family: 'Karla', sans-serif;
-    font-size: 16px;
+    font-size: 18px;
 }
 
 
@@ -29,65 +34,124 @@ body > div {
     width: 20%;
 }
 
-body > #middle-column {
+#middle-column {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     width: 60%;
     overflow: hidden;
+    padding: 0;
+    margin: 0;
+}
+
+#upper-section, #lower-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
     padding: 20px;
+    margin: 0;
+    box-sizing: border-box;
 }
 
 
-body > #middle-column > #input-preview {
+.latex-box {
     display: flex;
     justify-content: center;
     align-items: center;
     background-color: #ebf5ed;
-    height: 150px;
     width: 100%;
-    padding: 15px;
+    height: 150px;
+    padding: 17px;
     margin-bottom: 20px;
-    overflow: scroll;
+    overflow: auto;
     box-sizing: border-box;
-}
+    border-radius: 20px;
 
-body > #middle-column > #differentiate {
+
+}
+#differentiate {
     display: flex;
     flex-direction: row;
     align-items: center;
     width: 100%;
     height: 40px;
     justify-content: space-between;
+    margin-bottom: 20px;
 }
 
-
-
-body > #middle-column > #differentiate > input {
+input {
     font-family: 'Karla', sans-serif;
-    font-size: 16px;
+    font-size: 18px;
     border: 0;
 }
 
-body > #middle-column > #differentiate > #expand {
+#expand {
     width: auto;
 }
 
-body > #middle-column > #differentiate > #input-text {
-    width: 70%;
+#input-text {
+    width: 68%;
     height: 100%;
+    border-radius: 20px;
+    box-sizing: border-box;
+    padding-left: 30px;
+    padding-right: 30px;
 }
 
-body > #middle-column > #differentiate > #submit-button {
-    width: 17%;
+#submit-button, #simplify-submit {
     height: 100%;
     font-weight: bold;
     color: white;
     background-color: #d97736;
+    border-radius: 20px;
+    padding-left: 15px;
+    padding-right: 15px;
 }
 
-body > #middle-column > #input-preview > mjx-container {
-    margin: 0px;
-    color: #2c4531;
+#submit-button:hover , #simplify-submit:hover {
+    background-color: #d64118;
+    cursor: pointer;
+}
+
+#submit-button:active , #simplify-submit:active {
+    background-color: #ad3621;
+}
+
+#simplify {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    height: 40px;
+}
+
+#input-preview * {
+    color: #154899;
+}
+
+#input-simplified, #differentiated-result {
+    background-color: #d8e8db;
+}
+
+#show-steps {
+    width: 100%;
+    height: 60px;
+    font-family: 'Karla', sans-serif;
+    font-size: 21px;
+    font-weight: bold;
+    color: white;
+    background-color: #8ab593;
+    border: 0;
+    text-align: left;
+    padding-left: 20px;
+    padding-right: 20px;
+    cursor: pointer;
+}
+
+#steps {
+    padding: 0 18px;
+    display: none;
+    overflow: hidden;
 }

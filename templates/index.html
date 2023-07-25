@@ -16,42 +16,40 @@
     </div>
 
     <div id="middle-column">
-        <h1>Calculus Derivative Calculator</h1>
+        <div id="upper-section">
+            <h1>Calculus Derivative Calculator</h1>
+            <h2>Input preview</h2>
+            <p>If the entire input doesn't appear, try scrolling</p>
+            <div id="input-preview" class="latex-box"></div>
 
-        <h2>Input preview</h2>
-        <p>If the entire input doesn't appear, try scrolling</p>
-        <div id="input-preview" class="latex-box"></div>
 
+            <form id="differentiate">
+                <input type="text" placeholder="Enter an expression to differentiate..." id="input-text" name="input_text">
+                <input type="checkbox" id="expand" name="expand" value="false" onclick="toggleExpandCheckbox()">
+                <label for="expand" id="expand-text">Expand?</label>
+                <input type="submit" id="submit-button" value="Differentiate!">
+            </form>
 
-        <form id="differentiate">
-            <input type="text" placeholder="Enter an expression to differentiate..." id="input-text" name="input_text">
-            <input type="checkbox" id="expand" name="expand" value="false" onclick="toggleExpandCheckbox()">
-            <label for="expand" id="expand-text">Expand?</label>
-            <input type="submit" id="submit-button" value="Differentiate!">
-        </form>
-
-        <div id="input-simplified-box">
             <h2>Original expression</h2>
             <p>Rearranged and simplified:</p>
-            <p id="input-simplified" class="latex-box"></p>
-        </div>
+            <div id="input-simplified" class="latex-box"></div>
 
-        <div id="button-box">
             <form id="simplify">
                 <input type="hidden" id="simplify-original" name="simplify_original" value="">
                 <input type="hidden" id="simplify-expand" name="simplify_expand" value="">
-                <input type="submit" value="Simplify further">
+                <input type="submit" id="simplify-submit" value="Simplify further">
             </form>
         </div>
 
-        <div id="differentiated-box">
-            <h2>Differentiated expression</h2>
-            <button type="button" class="show-steps">Show steps</button>
-            <div class="content">
-              <p>Lorem ipsum...</p>
-            </div>
+        <h2>Differentiated expression</h2>
+        <button type="button" id="show-steps">Steps</button>
+        <div id="steps">
+          <p>Lorem ipsum...</p>
+        </div>
+
+        <div id="lower-section">
             <p>Rearranged and simplified:</p>
-            <p id="differentiated-result" class="latex-box"></p>
+            <div id="differentiated-result" class="latex-box"></div>
         </div>
     </div>
 

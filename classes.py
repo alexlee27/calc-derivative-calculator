@@ -31,11 +31,15 @@ class Expr:
     def __str__(self) -> str:
         raise NotImplementedError
 
+    # def __len__(self) -> int:
+    #     """Returns the number of leaves in the Expr tree."""
+    #     raise NotImplementedError
+
     def get_latex(self) -> str:
         """Get the LaTeX code for the expression."""
         raise NotImplementedError
 
-    def differentiate(self, respect_to: str) -> Expr:
+    def differentiate(self, respect_to: str, steps: list) -> tuple[Expr, list]:
         """Differentiate the expression."""
         raise NotImplementedError
 
@@ -261,6 +265,9 @@ class BinOp(Expr):
         self.left = left
         self.right = right
 
+    # def __len__(self) -> int:
+    #     return len(self.left) + len(self.right)
+
 
 class Num(Expr):
     """An abstract class representing a number (constant or variable).
@@ -275,6 +282,9 @@ class Num(Expr):
 
     def __str__(self) -> str:
         return str(self.name) + ' '
+
+    # def __len__(self) -> int:
+    #     return 1
 
     def get_latex(self) -> str:
         return str(self.name) + ' '
@@ -293,6 +303,9 @@ class Func(Expr):
     def __init__(self, arg: Expr) -> None:
         self.arg = arg
 
+    # def __len__(self) -> int:
+    #     return len(self.arg)
+
 
 class Plus(BinOp):
     """Represents the binary operation of adding two expressions.
@@ -301,9 +314,18 @@ class Plus(BinOp):
         - left: the expression to the left of the plus sign
         - right: the expression to the right of the plus sign
     """
+    num_non_plus: int = 0
 
     def __init__(self, left: Expr, right: Expr) -> None:
         super().__init__(left, right)
+        if not isinstance(self.left, Plus):
+            self.num_non_plus += 1
+        else:
+            self.num_non_plus += self.left.num_non_plus
+        if not isinstance(self.right, Plus):
+            self.num_non_plus += 1
+        else:
+            self.num_non_plus += self.right.num_non_plus
 
     def __str__(self) -> str:
         return '( ' + str(self.left) + '+ ' + str(self.right) + ') '
@@ -463,15 +485,14 @@ class Plus(BinOp):
         #  ...  A      (where A is an arbitrary arrangement type)
         if isinstance(self.left, Plus) and not isinstance(self.right, Plus):
             if get_arrangement_type(self.left.right)[0] == get_arrangement_type(self.right)[0]:
-                left_simplified = self.left.simplify(expand)
-                if str(left_simplified) != str(self.left):
-                    return Plus(left_simplified, self.right.simplify(expand)).simplify(expand)
+                r_simplified = self.right.simplify(expand)
+                lr_simplified = self.left.right.simplify(expand)
+                lr_and_r_simplified = Plus(lr_simplified, r_simplified).simplify(expand)
+                if str(lr_and_r_simplified) != str(Plus(lr_simplified, r_simplified)):
+                    return Plus(self.left.left, lr_and_r_simplified).simplify(expand)
                 else:
-                    lr_simplified = self.left.right.simplify(expand)
-                    r_simplified = self.right.simplify(expand)
-                    lr_and_r_simplified = Plus(lr_simplified, r_simplified).simplify(expand)
-                    if str(lr_and_r_simplified) != str(Plus(lr_simplified, r_simplified)):
-                        return Plus(self.left.left.simplify(expand), lr_and_r_simplified).simplify(expand)
+                    return Plus(self.left.simplify(expand), r_simplified)
+
 
         # # Multiply + Expr or Expr + Multiply
         # if isinstance(self.left, Multiply) or isinstance(self.right, Multiply):
@@ -575,6 +596,7 @@ class Multiply(BinOp):
         #     if isinstance(self.left, Const) and self.left.name == 1:
         #         return Multiply(Const(1), Pow(self.right.left.simplify(expand), Const(-1)))
 
+
         if expand:
             if isinstance(self.left, Plus):
                 right_simplified = self.right.simplify(expand)
@@ -636,22 +658,6 @@ class Multiply(BinOp):
             if str(exponents_simplified) != str(Plus(self.right.right, Const(1))):
                 return Pow(self.left.simplify(expand), exponents_simplified)
 
-        #       *
-        #      / \
-        #     *   A
-        #    / \
-        #  ...  A      (where A is an arbitrary arrangement type)
-        if isinstance(self.left, Multiply) and not isinstance(self.right, Multiply):
-            if get_arrangement_type(self.left.right)[0] == get_arrangement_type(self.right)[0]:
-                left_simplified = self.left.simplify(expand)
-                if str(left_simplified) != str(self.left):
-                    return Multiply(left_simplified, self.right.simplify(expand)).simplify(expand)
-                else:
-                    lr_simplified = self.left.right.simplify(expand)
-                    r_simplified = self.right.simplify(expand)
-                    lr_and_r_simplified = Multiply(lr_simplified, r_simplified).simplify(expand)
-                    if str(lr_and_r_simplified) != str(Multiply(lr_simplified, r_simplified)):
-                        return Multiply(self.left.left.simplify(expand), lr_and_r_simplified).simplify(expand)
 
         # # something * ( numerator / denominator) = (something * numerator) / denominator
         # if isinstance(self.right, Multiply) and isinstance(self.right.right, Pow) and \
@@ -665,7 +671,23 @@ class Multiply(BinOp):
             numerator = self.left.name
             denominator = self.right.left.name
             divisor = gcd(numerator, denominator)
-            return Multiply(Const(numerator // divisor), Pow(Const(denominator // divisor), Const(-1)))
+            return Multiply(Const(numerator // divisor), Pow(Const(denominator // divisor), Const(-1)))\
+
+
+        #       *
+        #      / \
+        #     *   A
+        #    / \
+        #  ...  A      (where A is an arbitrary arrangement type)
+        if isinstance(self.left, Multiply) and not isinstance(self.right, Multiply):
+            if get_arrangement_type(self.left.right)[0] == get_arrangement_type(self.right)[0]:
+                r_simplified = self.right.simplify(expand)
+                lr_simplified = self.left.right.simplify(expand)
+                lr_and_r_simplified = Multiply(lr_simplified, r_simplified).simplify(expand)
+                if str(lr_and_r_simplified) != str(Multiply(lr_simplified, r_simplified)):
+                    return Multiply(self.left.left, lr_and_r_simplified).simplify(expand)
+                else:
+                    return Multiply(self.left.simplify(expand), r_simplified)
 
 
 
@@ -1280,7 +1302,10 @@ class Pow(BinOp):
 
         if expand:
             # Binomial expansion
-            if isinstance(self.right, Const) and isinstance(self.right.name, int) and self.right.name > 1 and isinstance(self.left, Plus):
+            if isinstance(self.right, Const) and isinstance(self.right.name, int) and self.right.name > 1 and \
+                    isinstance(self.left, Plus) and ((self.left.num_non_plus == 2 and self.right.name <= 100) or
+                                                     (self.left.num_non_plus <= 20 and self.right.name == 2) or
+                                                     (self.left.num_non_plus + self.right.name <= 10)):
                 n = self.right.name
                 x = self.left.left.simplify(expand)
                 y = self.left.right.simplify(expand)

@@ -1,3 +1,14 @@
+var coll = document.getElementById("show-steps");
+coll.addEventListener("click", function() {
+    this.classList.toggle("active");
+    var content = document.getElementById("steps");
+    if (content.style.display === "block") {
+      content.style.display = "none";
+    } else {
+      content.style.display = "block";
+    }
+});
+
 // All jQuery code goes below
 // $ is shortcut for 'jQuery'
 $(document).ready(function () {
@@ -38,6 +49,10 @@ $(document).ready(function () {
                 $simplifyExpand.val(expand);
 
                 MathJax.typesetPromise();
+                OverflowChangeStyle("input-simplified");
+                OverflowChangeStyle("differentiated-result");
+                changeLaTeXStyle("input-simplified", 130);
+                changeLaTeXStyle("differentiated-result", 130);
             },
             error: function (xhr, status, error) {
                 console.log(error);
@@ -63,8 +78,8 @@ $(document).ready(function () {
                 $inputPreview.html(result);
 
                 MathJax.typesetPromise();
-                changeLaTeXStyle("input-preview");
-                isOverflown("input-preview");
+                changeLaTeXStyle("input-preview", 180);
+                OverflowChangeStyle("input-preview");
             },
             error: function (xhr, status, error) {
                 console.log(error);
@@ -109,6 +124,10 @@ $(document).ready(function () {
                 $simplifyExpand.val(expand);
 
                 MathJax.typesetPromise();
+                OverflowChangeStyle("input-simplified");
+                OverflowChangeStyle("differentiated-result");
+                changeLaTeXStyle("input-simplified", 130);
+                changeLaTeXStyle("differentiated-result", 130);
             },
             error: function (xhr, status, error) {
                 console.log(error);
@@ -122,28 +141,47 @@ function toggleExpandCheckbox() {
     checkbox.value = checkbox.checked;
 }
 
-function changeLaTeXStyle(idName) {
+function changeLaTeXStyle(idName, fontSize) {
     let div = document.getElementById(idName);
     let latex = div.getElementsByClassName("MathJax CtxtMenu_Attached_0")[0]
-    latex.setAttribute("style", "font-size: 150%;");
+    latex.setAttribute("style", "font-size: " + fontSize.toString() + "%;");
 }
 
-function isOverflown(idName) {
+function OverflowChangeStyle(idName) {
     let div = document.getElementById(idName);
-    if (div.scrollHeight > div.clientHeight) {
+    let styles = getComputedStyle(div);
+    let latex = div.getElementsByClassName("MathJax CtxtMenu_Attached_0")[0];
+    if (latex.offsetHeight > div.offsetHeight) {
         div.style.alignItems = "flex-start";
+        console.log('1');
+        console.log(idName);
+        console.log(latex.offsetHeight);
+        console.log(div.offsetHeight);
 //        div.style.overflow = "scroll";
     }
-    if (div.scrollWidth > div.clientWidth) {
+    if (latex.offsetWidth > div.offsetWidth - 130) {
         div.style.justifyContent = "flex-start";
+        console.log('2');
+        console.log(idName);
+        console.log(latex.offsetWidth);
+        console.log(div.offsetWidth - 130);
 //        div.style.overflow = "scroll";
     }
-    if (div.scrollHeight <= div.clientHeight) {
+    if (latex.offsetHeight <= div.offsetHeight) {
         div.style.alignItems = "center";
+        console.log('3');
+        console.log(idName);
+        console.log(latex.offsetHeight);
+        console.log(div.offsetHeight);
 //        div.style.overflow = "auto";
     }
-    if (div.scrollWidth <= div.clientWidth) {
+    if (latex.offsetWidth <= div.offsetWidth - 130) {
         div.style.justifyContent = "center";
+        console.log('4');
+        console.log(idName);
+        console.log(latex.offsetWidth);
+        console.log(div.offsetWidth - 130);
 //        div.style.overflow = "auto";
     }
+
 }
