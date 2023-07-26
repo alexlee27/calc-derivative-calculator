@@ -40,6 +40,7 @@ $(document).ready(function () {
                 let input_simplified_string = response.input_simplified_string;
                 let differentiated_string = response.differentiated_string;
                 let expand = response.expand;
+                let steps_latex = response.steps_latex;
 
                 input_simplified = "$$" + input_simplified + "$$";
                 differentiated = "$$" + differentiated + "$$";
@@ -49,6 +50,7 @@ $(document).ready(function () {
                 const $simplifyOriginal = $("#simplify-original");
                 const $simplifyDifferentiated = $("#simplify-differentiated");
                 const $simplifyExpand = $("#simplify-expand");
+                const $steps = $("#steps");
 
 
                 $inputSimplified.html(input_simplified);
@@ -56,6 +58,13 @@ $(document).ready(function () {
                 $simplifyOriginal.val(input_simplified_string);
                 $simplifyDifferentiated.val(differentiated_string);
                 $simplifyExpand.val(expand);
+
+                $steps.empty();
+
+                for (let i = 0; i < steps_latex.length; i++) {
+                    step = "<div>$$" + steps_latex[i] + "$$</div>";
+                    $steps.append(step);
+                }
 
                 MathJax.typesetPromise();
                 OverflowChangeStyle("input-simplified");

@@ -380,10 +380,10 @@ def main() -> None:
     print('Program is done')
 
 
-def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[str, str, str, str]:
+def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[str, str, str, str, list]:
     """Differentiates the mathematical expression represented by input_text,
     returns a tuple in the form (input_simplfied_latex, differentiated_latex, input_simplified_string,
-     differentiated_string, expand)
+     differentiated_string, expand, steps_latex)
     """
     expr = string_to_expr(input_text, {variable})
     if isinstance(expr, Expr):
@@ -403,7 +403,7 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
                 print('curr : ' + str(curr))
         simplified_input = curr.trig_simplify().fractionify()
 
-        differentiated = simplified_input.differentiate(variable)
+        differentiated, steps = simplified_input.differentiate(variable)
         print('differentiated')
         prev1 = None
         curr = differentiated
@@ -422,10 +422,11 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
         # todo: toggle below for graph
         # visualization_runner(curr)
         differentiated = curr.trig_simplify().fractionify()
+        steps_latex = [item.get_latex() for item in steps]
         return "\\displaystyle" + simplified_input.get_latex(), "\\displaystyle" + differentiated.get_latex(),\
-            str(simplified_input), str(differentiated)
+            str(simplified_input), str(differentiated), steps_latex
     elif isinstance(expr, CustomError):
-        return '\\text{' + expr.msg + '}', '', '', ''
+        return '\\text{' + expr.msg + '}', '', '', '', []
 
 
 def input_preview(input_text: str, variable: str = 'x') -> str:

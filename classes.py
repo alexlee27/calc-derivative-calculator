@@ -2,6 +2,7 @@
 from __future__ import annotations
 from typing import *
 
+
 # todo: run a bunch of test cases for Plus.simplify, Plus.rearrange, Multiply.simplify, and Multiply.rearrange
 # x ^ e, x ^ pi, x ^ x works
 # Func ^ f(x) (e.g. ( ln ( e ) ) ^ x ) works
@@ -22,6 +23,7 @@ from typing import *
 # todo: detect a/b as digit
 # todo: log simplification
 #  todo: -x^3 -1 -1
+# todo: enable clearing steps in html
 
 
 class Expr:
@@ -39,7 +41,7 @@ class Expr:
         """Get the LaTeX code for the expression."""
         raise NotImplementedError
 
-    def differentiate(self, respect_to: str, steps: list) -> tuple[Expr, list]:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         """Differentiate the expression."""
         raise NotImplementedError
 
@@ -210,8 +212,6 @@ class Expr:
                         elif self_exponent > other_exponent:
                             return False
 
-
-
                 # if isinstance(self, Pow) and isinstance(other, Const):
                 #     return True
                 # if isinstance(self, Const) and isinstance(other, Pow):
@@ -256,11 +256,20 @@ class Diff(Expr):
 
     Instance Attributes:
         - content: the Expr inside ...
+        - variable_of_diff: the variable of differentiation
     """
     content: Expr
+    variable_of_diff: str
 
-    def __init__(self, content: Expr) -> None:
+    def __init__(self, content: Expr, variable_of_diff: str) -> None:
         self.content = content
+        self.variable_of_diff = variable_of_diff
+
+    def __str__(self) -> str:
+        return 'd/d' + self.variable_of_diff + '[' + str(self.content) + ']'
+
+    def get_latex(self) -> str:
+        return '\\frac{d}{d' + self.variable_of_diff + '}\\left[' + self.content.get_latex() + '\\right]'
 
 
 class BinOp(Expr):
@@ -340,6 +349,9 @@ class Plus(BinOp):
             self.num_non_plus += self.right.num_non_plus
 
     def __str__(self) -> str:
+        if isinstance(self.right, Const) and (isinstance(self.right.name, int) or isinstance(self.right.name, float)) \
+                and self.right.name < 0:
+            return '( ' + str(self.left) + '+ ( ' + str(self.right) + ') ) '
         return '( ' + str(self.left) + '+ ' + str(self.right) + ') '
 
     def get_latex(self) -> str:
@@ -356,8 +368,15 @@ class Plus(BinOp):
 
         return self.left.get_latex() + '+ ' + self.right.get_latex()
 
-    def differentiate(self, respect_to: str, steps: list) -> tuple[Expr, list]:
-        return Plus(self.left.differentiate(respect_to), self.right.differentiate(respect_to))  # todo: keep working
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
+        steps = [Plus(Diff(self.left, respect_to), Diff(self.right, respect_to))]
+        left_differentiated, left_steps = self.left.differentiate(respect_to)
+        right_differentiated, right_steps = self.right.differentiate(respect_to)
+        for item in left_steps:
+            steps.append(Plus(item, Diff(self.right, respect_to)))
+        for item in right_steps:
+            steps.append(Plus(left_steps[-1], item))
+        return Plus(left_differentiated, right_differentiated), steps
 
     def simplify(self, expand: bool) -> Expr:
         # self.left == self.right
@@ -385,13 +404,13 @@ class Plus(BinOp):
 
         # a/b + c/d, where a, b, c, d are numbers
         if isinstance(self.left, Multiply) and isinstance(self.right, Multiply) and \
-            isinstance(self.left.left, Const) and isinstance(self.left.left.name, int) and \
-            isinstance(self.right.left, Const) and isinstance(self.right.left.name, int) and \
-            isinstance(self.left.right, Pow) and isinstance(self.right.right, Pow) and \
-            isinstance(self.left.right.left, Const) and isinstance(self.left.right.left.name, int) and \
-            isinstance(self.left.right.right, Const) and self.left.right.right.name == -1 and \
-            isinstance(self.right.right.left, Const) and isinstance(self.right.right.left.name, int) and \
-            isinstance(self.right.right.right, Const) and self.right.right.right.name == -1:
+                isinstance(self.left.left, Const) and isinstance(self.left.left.name, int) and \
+                isinstance(self.right.left, Const) and isinstance(self.right.left.name, int) and \
+                isinstance(self.left.right, Pow) and isinstance(self.right.right, Pow) and \
+                isinstance(self.left.right.left, Const) and isinstance(self.left.right.left.name, int) and \
+                isinstance(self.left.right.right, Const) and self.left.right.right.name == -1 and \
+                isinstance(self.right.right.left, Const) and isinstance(self.right.right.left.name, int) and \
+                isinstance(self.right.right.right, Const) and self.right.right.right.name == -1:
             a, b, c, d = self.left.left.name, self.left.right.left.name, self.right.left.name, self.right.right.left.name
             common_denom = lcm(b, d)
             b_multiplier = common_denom // b
@@ -419,28 +438,32 @@ class Plus(BinOp):
             #       a  b c  d
             # Case 1: a and c are the same object
             if str(self.left.left) == str(self.right.left):
-                factor_simplified = Plus(self.left.right.simplify(expand), self.right.right.simplify(expand)).simplify(expand)
+                factor_simplified = Plus(self.left.right.simplify(expand), self.right.right.simplify(expand)).simplify(
+                    expand)
                 if isinstance(factor_simplified, Const) and factor_simplified.name == 0:
                     return Const(0)
                 if not expand:
                     return Multiply(factor_simplified, self.left.left.simplify(expand))  # .simplify(expand)
             # Case 2: a and d are the same object
             if str(self.left.left) == str(self.right.right):
-                factor_simplified = Plus(self.left.right.simplify(expand), self.right.left.simplify(expand)).simplify(expand)
+                factor_simplified = Plus(self.left.right.simplify(expand), self.right.left.simplify(expand)).simplify(
+                    expand)
                 if isinstance(factor_simplified, Const) and factor_simplified.name == 0:
                     return Const(0)
                 if not expand:
                     return Multiply(factor_simplified, self.left.left.simplify(expand))  # .simplify(expand)
             # Case 3: b and c are the same object
             if str(self.left.right) == str(self.right.left):
-                factor_simplified = Plus(self.left.left.simplify(expand), self.right.right.simplify(expand)).simplify(expand)
+                factor_simplified = Plus(self.left.left.simplify(expand), self.right.right.simplify(expand)).simplify(
+                    expand)
                 if isinstance(factor_simplified, Const) and factor_simplified.name == 0:
                     return Const(0)
                 if not expand:
                     return Multiply(factor_simplified, self.left.right.simplify(expand))  # .simplify(expand)
             # Case 4: b and d are the same object
             if str(self.left.right) == str(self.right.right):
-                factor_simplified = Plus(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(expand)
+                factor_simplified = Plus(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(
+                    expand)
                 if isinstance(factor_simplified, Const) and factor_simplified.name == 0:
                     return Const(0)
                 if not expand:
@@ -505,7 +528,6 @@ class Plus(BinOp):
                 else:
                     return Plus(self.left.simplify(expand), r_simplified)
 
-
         # # Multiply + Expr or Expr + Multiply
         # if isinstance(self.left, Multiply) or isinstance(self.right, Multiply):
         #     result = Plus(self.left.simplify(expand), self.right.simplify(expand)).simplify(expand)
@@ -567,6 +589,9 @@ class Multiply(BinOp):
         super().__init__(left, right)
 
     def __str__(self) -> str:
+        if isinstance(self.right, Const) and (isinstance(self.right.name, int) or isinstance(self.right.name, float)) \
+                and self.right.name < 0:
+            return '( ' + str(self.left) + '* ( ' + str(self.right) + ') ) '
         return '( ' + str(self.left) + '* ' + str(self.right) + ') '
 
     def get_latex(self) -> str:
@@ -592,23 +617,38 @@ class Multiply(BinOp):
                     return left_latex + ' ' + right_latex
         return left_latex + '\\cdot ' + right_latex
 
-    def differentiate(self, respect_to: str) -> Expr:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if isinstance(self.left, Const) and not isinstance(self.right, Const):
-            return Multiply(self.left, self.right.differentiate(respect_to))
+            steps = [Multiply(self.left, Diff(self.right, respect_to))]
+            right_differentiated, right_steps = self.right.differentiate(respect_to)
+            for item in right_steps:
+                steps.append(Multiply(self.left, item))
+            return Multiply(self.left, right_differentiated), steps
 
         if isinstance(self.right, Const) and not isinstance(self.left, Const):
-            return Multiply(self.right, self.left.differentiate(respect_to))
+            steps = [Multiply(self.right, Diff(self.left, respect_to))]
+            left_differentiated, left_steps = self.left.differentiate(respect_to)
+            for item in left_steps:
+                steps.append(Multiply(self.right, item))
+            return Multiply(self.right, left_differentiated), steps
 
-        return Plus(Multiply(self.left.differentiate(respect_to), self.right),
-                    Multiply(self.left, self.right.differentiate(respect_to)))
+        steps = [Plus(Multiply(Diff(self.left, respect_to), self.right),
+                      Multiply(self.left, Diff(self.right, respect_to)))]
+        left_differentiated, left_steps = self.left.differentiate(respect_to)
+        right_differentiated, right_steps = self.right.differentiate(respect_to)
+        for item in left_steps:
+            steps.append(Plus(Multiply(item, self.right), Multiply(self.left, Diff(self.right, respect_to))))
+        for item in right_steps:
+            steps.append(Plus(Multiply(left_steps[-1], self.right), Multiply(self.left, item)))
+
+        return Plus(Multiply(left_differentiated, self.right),
+                    Multiply(self.left, right_differentiated)), steps
 
     def simplify(self, expand: bool) -> Expr:
         # Preventing simplification of 1 * (something ^ -1) into (something ^ -1)
         # if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
         #     if isinstance(self.left, Const) and self.left.name == 1:
         #         return Multiply(Const(1), Pow(self.right.left.simplify(expand), Const(-1)))
-
-
         if expand:
             if isinstance(self.left, Plus):
                 right_simplified = self.right.simplify(expand)
@@ -670,7 +710,6 @@ class Multiply(BinOp):
             if str(exponents_simplified) != str(Plus(self.right.right, Const(1))):
                 return Pow(self.left.simplify(expand), exponents_simplified)
 
-
         # # something * ( numerator / denominator) = (something * numerator) / denominator
         # if isinstance(self.right, Multiply) and isinstance(self.right.right, Pow) and \
         #         isinstance(self.right.right.right, Const) and self.right.right.right.name == -1:
@@ -678,15 +717,14 @@ class Multiply(BinOp):
 
         # Simplifying n / m (fractions)
         if isinstance(self.left, Const) and isinstance(self.left.name, int) and isinstance(self.right, Pow) and \
-            isinstance(self.right.left, Const) and isinstance(self.right.left.name, int) and \
+                isinstance(self.right.left, Const) and isinstance(self.right.left.name, int) and \
                 isinstance(self.right.right, Const) and self.right.right.name == -1:
             numerator = self.left.name
             denominator = self.right.left.name
             divisor = gcd(numerator, denominator)
-            return Multiply(Const(numerator // divisor), Pow(Const(denominator // divisor), Const(-1)))\
-
-
-        #       *
+            return Multiply(Const(numerator // divisor), Pow(Const(denominator // divisor), Const(-1))) \
+ \
+                #       *
         #      / \
         #     *   A
         #    / \
@@ -700,8 +738,6 @@ class Multiply(BinOp):
                     return Multiply(self.left.left, lr_and_r_simplified).simplify(expand)
                 else:
                     return Multiply(self.left.simplify(expand), r_simplified)
-
-
 
         #  # <some_type> * (<some_type> * Expr)
         # if isinstance(self.right, Multiply) and type(self.left) == type(self.right.left):
@@ -837,7 +873,7 @@ class Multiply(BinOp):
             elif get_arrangement_type(lst[i])[0] == 'Non-digit':  # Is it a Non-digit?
                 if end_of_power and isinstance(end_of_power.left, Multiply):
                     end_of_power.left = end_of_power.left.right
-                else: # If power_tree contains only 1 Power object
+                else:  # If power_tree contains only 1 Power object
                     power_tree = power_tree.right
                 non_digit_tree = lst[i]
                 i += 1
@@ -861,7 +897,7 @@ class Multiply(BinOp):
             else:  # Must be a digit tree
                 if end_of_power and isinstance(end_of_power.left, Multiply):
                     end_of_power.left = end_of_power.left.right
-                else: # If power_tree contains only 1 Power object
+                else:  # If power_tree contains only 1 Power object
                     power_tree = power_tree.right
                 digit_tree = lst[i]
                 i += 1
@@ -1233,8 +1269,8 @@ class Const(Num):
         else:
             return super().get_latex()
 
-    def differentiate(self, respect_to: str) -> Expr:
-        return Const(0)
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
+        return Const(0), [Const(0)]
 
 
 class Pow(BinOp):
@@ -1274,30 +1310,55 @@ class Pow(BinOp):
         right_latex = self.right.get_latex()
         return '{ ' + left_latex + '} ' + '^ { ' + right_latex + '} '
 
-    def differentiate(self, respect_to: str) -> Expr:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if isinstance(self.left, Const) and isinstance(self.right, Const):
-            return Const(0)
+            return Const(0), [Const(0)]
 
         # Power rule for int or float exponents
         if not isinstance(self.left, Const) and isinstance(self.right, Const) \
                 and (isinstance(self.right.name, int) or (isinstance(self.right.name, float))):
+            steps = [Multiply(Multiply(self.right,
+                                       Pow(self.left, Const(self.right.name - 1))), Diff(self.left, respect_to))]
+            left_differentiated, left_steps = self.left.differentiate(respect_to)
+            for item in left_steps:
+                steps.append(Multiply(Multiply(self.right,
+                                               Pow(self.left, Const(self.right.name - 1))), item))
             return Multiply(Multiply(self.right,
-                                     Pow(self.left, Const(self.right.name - 1))), self.left.differentiate(respect_to))
+                                     Pow(self.left, Const(self.right.name - 1))), left_differentiated), steps
 
-        # Power rule for str exponenets
+        # Power rule for str exponents
         if not isinstance(self.left, Const) and isinstance(self.right, Const) and isinstance(self.right.name, str):
+            steps = [Multiply(Multiply(self.right,
+                                       Pow(self.left, Plus(self.right, Const(-1)))), Diff(self.left, respect_to))]
+            left_differentiated, left_steps = self.left.differentiate(respect_to)
+            for item in left_steps:
+                steps.append(Multiply(Multiply(self.right,
+                                               Pow(self.left, Plus(self.right, Const(-1)))), item))
             return Multiply(Multiply(self.right,
-                                     Pow(self.left, Plus(self.right, Const(-1)))), self.left.differentiate(respect_to))
+                                     Pow(self.left, Plus(self.right, Const(-1)))), left_differentiated), steps
 
         # e ^ f(x)
         if isinstance(self.left, Const) and self.left.name == 'e' and not isinstance(self.right, Const):
-            return Multiply(self, self.right.differentiate(respect_to))
+            steps = [Multiply(self, Diff(self.right, respect_to))]
+            right_differentiated, right_steps = self.right.differentiate(respect_to)
+            for item in right_steps:
+                steps.append(Multiply(self, item))
+            return Multiply(self, right_differentiated), steps
 
         # Const ^ f(x)
         if isinstance(self.left, Const) and not isinstance(self.right, Const):
-            return Multiply(self, Multiply(Log(Const('e'), self.left), self.right.differentiate(respect_to)))
+            steps = [Multiply(self, Multiply(Log(Const('e'), self.left), Diff(self.right, respect_to)))]
+            right_differentiated, right_steps = self.right.differentiate(respect_to)
+            for item in right_steps:
+                steps.append(Multiply(self, Multiply(Log(Const('e'), self.left), item)))
+            return Multiply(self, Multiply(Log(Const('e'), self.left), right_differentiated)), steps
 
-        return Pow(Const('e'), Multiply(self.right, Log(Const('e'), self.left))).differentiate(respect_to)
+        steps = [Diff(Pow(Const('e'), Multiply(self.right, Log(Const('e'), self.left))), respect_to)]
+        differentiated, differentiated_steps = \
+            Pow(Const('e'), Multiply(self.right, Log(Const('e'), self.left))).differentiate(respect_to)
+        for item in differentiated_steps:
+            steps.append(item)
+        return differentiated, steps
 
     def simplify(self, expand: bool) -> Expr:
         if isinstance(self.right, Const):
@@ -1358,7 +1419,8 @@ class Pow(BinOp):
             base_simplified = self.left.simplify(expand)
             exponent_simplified = self.right.simplify(expand)
             if str(exponent_simplified) == str(self.right):
-                return Multiply(Pow(base_simplified, self.right.left).simplify(expand), Pow(base_simplified, self.right.right).simplify(expand)).simplify(expand)
+                return Multiply(Pow(base_simplified, self.right.left).simplify(expand),
+                                Pow(base_simplified, self.right.right).simplify(expand)).simplify(expand)
             return Pow(base_simplified, exponent_simplified)
 
         return Pow(self.left.simplify(expand), self.right.simplify(expand))
@@ -1446,11 +1508,11 @@ class Var(Num):
     def __init__(self, name: str) -> None:
         super().__init__(name)
 
-    def differentiate(self, respect_to: str) -> Expr:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if respect_to == self.name:
-            return Const(1)
+            return Const(1), [Const(1)]
         else:
-            return Const(0)
+            return Const(0), [Const(0)]
 
 
 class Trig(Func):
@@ -1482,27 +1544,52 @@ class Trig(Func):
     def get_latex(self) -> str:
         return '\\' + self.name + ' \\left( ' + self.arg.get_latex() + '\\right) '
 
-    def differentiate(self, respect_to: str) -> Expr:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if self.name == 'sin':
-            return Multiply(Trig('cos', self.arg), self.arg.differentiate(respect_to))
+            steps = [Multiply(Trig('cos', self.arg), Diff(self.arg, respect_to))]
+            arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
+            for item in arg_steps:
+                steps.append(Multiply(Trig('cos', self.arg), item))
+            return Multiply(Trig('cos', self.arg), arg_differentiated), steps
         if self.name == 'cos':
-            return Multiply(Multiply(Const(-1), Trig('sin', self.arg)), self.arg.differentiate(respect_to))
+            steps = [Multiply(Multiply(Const(-1), Trig('sin', self.arg)), Diff(self.arg, respect_to))]
+            arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
+            for item in arg_steps:
+                steps.append(Multiply(Multiply(Const(-1), Trig('sin', self.arg)), item))
+            return Multiply(Multiply(Const(-1), Trig('sin', self.arg)), arg_differentiated), steps
         if self.name == 'tan':
-            return Multiply(Pow(Trig('cos', self.arg), Const(-2)), self.arg.differentiate(respect_to))
+            steps = [Multiply(Pow(Trig('cos', self.arg), Const(-2)), Diff(self.arg, respect_to))]
+            arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
+            for item in arg_steps:
+                steps.append(Multiply(Pow(Trig('cos', self.arg), Const(-2)), item))
+            return Multiply(Pow(Trig('cos', self.arg), Const(-2)), arg_differentiated), steps
             # return Multiply(Pow(Trig('sec', self.arg), Const(2)),
             #                 self.arg.differentiate(respect_to)
             #                 )
         if self.name == 'sec':
+            steps = [Multiply(Multiply(Trig('sin', self.arg), Pow(Trig('cos', self.arg), Const(-2))),
+                              Diff(self.arg, respect_to))]
+            arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
+            for item in arg_steps:
+                steps.append(Multiply(Multiply(Trig('sin', self.arg), Pow(Trig('cos', self.arg), Const(-2))),
+                                      item))
             return Multiply(Multiply(Trig('sin', self.arg), Pow(Trig('cos', self.arg), Const(-2))),
-                            self.arg.differentiate(respect_to))
+                            arg_differentiated), steps
             # return Multiply(Trig('sec', self.arg),
             #                 Multiply(Trig('tan', self.arg),
             #                          self.arg.differentiate(respect_to)
             #                          )
             #                 )
         if self.name == 'csc':
+            steps = [
+                Multiply(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))), Trig('cos', self.arg)),
+                         Diff(self.arg, respect_to))]
+            arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
+            for item in arg_steps:
+                steps.append(Multiply(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))),
+                                               Trig('cos', self.arg)), item))
             return Multiply(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))), Trig('cos', self.arg)),
-                            self.arg.differentiate(respect_to))
+                            arg_differentiated), steps
             # return Multiply(Const(-1),
             #                 Multiply(Trig('csc', Var('x')),
             #                          Multiply(Trig('cot', Var('x')),
@@ -1511,8 +1598,14 @@ class Trig(Func):
             #                          )
             #                 )
         if self.name == 'cot':
+            steps = [Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))),
+                              Diff(self.arg, respect_to))]
+            arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
+            for item in arg_steps:
+                steps.append(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))),
+                                      item))
             return Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))),
-                            self.arg.differentiate(respect_to))
+                            arg_differentiated), steps
             # return Multiply(Const(-1),
             #                 Multiply(Pow(Trig('csc', self.arg), Const(2)),
             #                          self.arg.differentiate(respect_to)
@@ -1520,18 +1613,39 @@ class Trig(Func):
             #                 )
 
         if self.name == 'arcsin':
-            return Multiply(self.arg.differentiate(respect_to),
+            steps = [Multiply(Diff(self.arg, respect_to),
+                              Pow(Plus(Const(1),
+                                       Multiply(Const(-1),
+                                                Pow(self.arg,
+                                                    Const(2)))), Multiply(Const(-1), Pow(Const(2), Const(-1)))))]
+            arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
+            for item in arg_steps:
+                steps.append(Multiply(item,
+                                      Pow(Plus(Const(1),
+                                               Multiply(Const(-1),
+                                                        Pow(self.arg,
+                                                            Const(2)))),
+                                          Multiply(Const(-1), Pow(Const(2), Const(-1))))))
+            return Multiply(arg_differentiated,
                             Pow(Plus(Const(1),
                                      Multiply(Const(-1),
                                               Pow(self.arg,
-                                                  Const(2)))), Const(-0.5))
-                            )
+                                                  Const(2)))), Multiply(Const(-1), Pow(Const(2), Const(-1))))), steps
         if self.name == 'arccos':
-            return Multiply(Const(-1), Trig('arcsin', self.arg).differentiate(respect_to))
+            steps = [Multiply(Const(-1), Diff(Trig('arcsin', self.arg), respect_to))]
+            differentiated, differentiated_steps = Trig('arcsin', self.arg).differentiate(respect_to)
+            for item in differentiated_steps:
+                steps.append(Multiply(Const(-1), item))
+            return Multiply(Const(-1), differentiated), steps
         if self.name == 'arctan':
-            return Multiply(self.arg.differentiate(respect_to),
-                            Pow(Plus(Pow(self.arg, Const(2)), Const(1)), Const(-1))
-                            )
+            steps = [Multiply(Diff(self.arg, respect_to),
+                              Pow(Plus(Pow(self.arg, Const(2)), Const(1)), Const(-1)))]
+            arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
+            for item in arg_steps:
+                steps.append(Multiply(item,
+                                      Pow(Plus(Pow(self.arg, Const(2)), Const(1)), Const(-1))))
+            return Multiply(arg_differentiated,
+                            Pow(Plus(Pow(self.arg, Const(2)), Const(1)), Const(-1))), steps
 
     def simplify(self, expand: bool) -> Expr:
         if self.name == 'tan':
@@ -1588,19 +1702,33 @@ class Log(Func):
         else:
             return '\\log_{' + self.base.get_latex() + '} \\left( ' + self.arg.get_latex() + '\\right) '
 
-    def differentiate(self, respect_to: str) -> Expr:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if isinstance(self.base, Const):
             if not isinstance(self.arg, Const):
                 if self.base.name == 'e':
-                    return Multiply(self.arg.differentiate(respect_to), Pow(self.arg, Const(-1)))
+                    steps = [Multiply(Diff(self.arg, respect_to), Pow(self.arg, Const(-1)))]
+                    arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
+                    for item in arg_steps:
+                        steps.append(Multiply(item, Pow(self.arg, Const(-1))))
+                    return Multiply(arg_differentiated, Pow(self.arg, Const(-1))), steps
                 else:
-                    return Multiply(self.arg.differentiate(respect_to),
-                                    Pow(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1))
-                                    )
+                    steps = [Multiply(Diff(self.arg, respect_to),
+                                      Pow(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1)))]
+                    arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
+                    for item in arg_steps:
+                        steps.append(Multiply(item,
+                                              Pow(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1))))
+                    return Multiply(arg_differentiated,
+                                    Pow(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1))), steps
             else:
                 # Then it is a constant!
-                return Const(0)
-        return Multiply(Log(Const('e'), self.arg), Pow(Log(Const('e'), self.base), Const(-1))).differentiate(respect_to)
+                return Const(0), [Const(0)]
+        steps = [Diff(Multiply(Log(Const('e'), self.arg), Pow(Log(Const('e'), self.base), Const(-1))), respect_to)]
+        differentiated, differentiated_steps = \
+            Multiply(Log(Const('e'), self.arg), Pow(Log(Const('e'), self.base), Const(-1))).differentiate(respect_to)
+        for item in differentiated_steps:
+            steps.append(item)
+        return differentiated, steps
 
     def simplify(self, expand: bool) -> Expr:
         if str(self.arg) == str(self.base):
@@ -1618,14 +1746,16 @@ class Log(Func):
 
         # logb(m ^ n) = n * logb(m)
         if isinstance(self.arg, Pow):
-            return Multiply(self.arg.right.simplify(expand), Log(base_simplified, self.arg.left.simplify(expand)).simplify(expand)).simplify(expand)
+            return Multiply(self.arg.right.simplify(expand),
+                            Log(base_simplified, self.arg.left.simplify(expand)).simplify(expand)).simplify(expand)
 
         if isinstance(base_simplified, Const):
             return Log(base_simplified, self.arg.simplify(expand))
         else:
             # return ln(arg) / ln(base)
             return Multiply(Log(Const('e'), self.arg.simplify(expand)).simplify(expand),
-                            Pow(Log(Const('e'), base_simplified).simplify(expand), Const(-1)).simplify(expand)).simplify(expand)
+                            Pow(Log(Const('e'), base_simplified).simplify(expand), Const(-1)).simplify(
+                                expand)).simplify(expand)
 
     def trig_simplify(self) -> Expr:
         return Log(self.base.trig_simplify(), self.arg.trig_simplify())
