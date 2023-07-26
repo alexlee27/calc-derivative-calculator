@@ -422,7 +422,8 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
         # todo: toggle below for graph
         # visualization_runner(curr)
         differentiated = curr.trig_simplify().fractionify()
-        return simplified_input.get_latex(), differentiated.get_latex(), str(simplified_input), str(differentiated)
+        return "\\displaystyle" + simplified_input.get_latex(), "\\displaystyle" + differentiated.get_latex(),\
+            str(simplified_input), str(differentiated)
     elif isinstance(expr, CustomError):
         return '\\text{' + expr.msg + '}', '', '', ''
 

@@ -250,6 +250,18 @@ def func_name_priority(name: str) -> int:
 #     def __str__(self) -> str:
 #         return 'nothing '
 
+class Diff(Expr):
+    """A class for displaying d/dx[...] (where x is the variable of differentiation).
+    Not used for actual calculations.
+
+    Instance Attributes:
+        - content: the Expr inside ...
+    """
+    content: Expr
+
+    def __init__(self, content: Expr) -> None:
+        self.content = content
+
 
 class BinOp(Expr):
     """An abstract class representing a binary operation.
@@ -344,8 +356,8 @@ class Plus(BinOp):
 
         return self.left.get_latex() + '+ ' + self.right.get_latex()
 
-    def differentiate(self, respect_to: str) -> Expr:
-        return Plus(self.left.differentiate(respect_to), self.right.differentiate(respect_to))
+    def differentiate(self, respect_to: str, steps: list) -> tuple[Expr, list]:
+        return Plus(self.left.differentiate(respect_to), self.right.differentiate(respect_to))  # todo: keep working
 
     def simplify(self, expand: bool) -> Expr:
         # self.left == self.right
@@ -563,10 +575,10 @@ class Multiply(BinOp):
         else:
             left_latex = self.left.get_latex()
         if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
-            return '\\displaystyle\\frac{ ' + left_latex + '}{ ' + self.right.left.get_latex() + '} '
+            return '\\frac{ ' + left_latex + '}{ ' + self.right.left.get_latex() + '} '
 
         right_latex = self.right.get_latex()
-        if isinstance(self.right, Plus) or right_latex[0] == '-' or right_latex[0:15] == '\\displaystyle-':
+        if isinstance(self.right, Plus) or right_latex[0] == '-':
             right_latex = '\\left( ' + right_latex + '\\right) '
 
         # digit * not a digit
@@ -1041,10 +1053,8 @@ class Multiply(BinOp):
                         # Don't do anything for sin_exp_abs == 0
 
         if isinstance(self.left, Multiply):
-            lr_trig_simplified = self.left.right.trig_simplify()
-            r_trig_simplified = self.right.trig_simplify()
-            lr_and_r_trig_simplified = Multiply(lr_trig_simplified, r_trig_simplified).trig_simplify()
-            if str(lr_and_r_trig_simplified) != str(Multiply(lr_trig_simplified, r_trig_simplified)):
+            lr_and_r_trig_simplified = Multiply(self.left.right, self.right).trig_simplify()
+            if str(lr_and_r_trig_simplified) != str(Multiply(self.left.right, self.right)):
                 return Multiply(self.left.left.trig_simplify(), lr_and_r_trig_simplified).trig_simplify()
 
         return Multiply(self.left.trig_simplify(), self.right.trig_simplify())
@@ -1248,7 +1258,7 @@ class Pow(BinOp):
 
     def get_latex(self) -> str:
         if isinstance(self.right, Const) and self.right.name == -1:
-            return '\\displaystyle\\frac{1}{ ' + self.left.get_latex() + '} '
+            return '\\frac{1}{ ' + self.left.get_latex() + '} '
         if isinstance(self.left, Trig):
             return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
         if isinstance(self.left, Log):
@@ -1261,7 +1271,8 @@ class Pow(BinOp):
             left_latex = '\\left( ' + self.left.get_latex() + '\\right) '
         else:
             left_latex = self.left.get_latex()
-        return '{ ' + left_latex + '} ' + '^ { ' + self.right.get_latex() + '} '
+        right_latex = self.right.get_latex()
+        return '{ ' + left_latex + '} ' + '^ { ' + right_latex + '} '
 
     def differentiate(self, respect_to: str) -> Expr:
         if isinstance(self.left, Const) and isinstance(self.right, Const):

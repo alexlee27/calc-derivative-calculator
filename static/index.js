@@ -1,12 +1,21 @@
-var coll = document.getElementById("show-steps");
+let coll = document.getElementById("show-steps");
 coll.addEventListener("click", function() {
     this.classList.toggle("active");
-    var content = document.getElementById("steps");
-    if (content.style.display === "block") {
-      content.style.display = "none";
+    let content = document.getElementById("steps");
+    if (content.style.maxHeight){
+      content.style.maxHeight = null;
     } else {
-      content.style.display = "block";
+      content.style.maxHeight = content.scrollHeight + "px";
     }
+
+    let icon = document.getElementById("show-steps-icon");
+    if (icon.textContent === "+") {
+        icon.textContent = "−"; // U+2212; not a hyphen
+    }
+    else {
+        icon.textContent = "+";
+    }
+
 });
 
 // All jQuery code goes below
@@ -151,12 +160,12 @@ function OverflowChangeStyle(idName) {
     let div = document.getElementById(idName);
     let styles = getComputedStyle(div);
     let latex = div.getElementsByClassName("MathJax CtxtMenu_Attached_0")[0];
-    if (latex.offsetHeight > div.offsetHeight) {
+    if (latex.offsetHeight > div.offsetHeight - 50) {
         div.style.alignItems = "flex-start";
         console.log('1');
         console.log(idName);
         console.log(latex.offsetHeight);
-        console.log(div.offsetHeight);
+        console.log(div.offsetHeight - 50);
 //        div.style.overflow = "scroll";
     }
     if (latex.offsetWidth > div.offsetWidth - 135) {
@@ -167,12 +176,12 @@ function OverflowChangeStyle(idName) {
         console.log(div.offsetWidth - 135);
 //        div.style.overflow = "scroll";
     }
-    if (latex.offsetHeight <= div.offsetHeight) {
+    if (latex.offsetHeight <= div.offsetHeight - 50) {
         div.style.alignItems = "center";
         console.log('3');
         console.log(idName);
         console.log(latex.offsetHeight);
-        console.log(div.offsetHeight);
+        console.log(div.offsetHeight - 50);
 //        div.style.overflow = "auto";
     }
     if (latex.offsetWidth <= div.offsetWidth - 135) {

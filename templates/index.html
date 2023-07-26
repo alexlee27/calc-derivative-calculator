@@ -22,7 +22,7 @@
         <div id="middle-column">
             <div id="upper-section">
                 <h2>Input preview</h2>
-                <p>If the entire input doesn't appear, try scrolling</p>
+                <p class="scroll-message">If the entire input doesn't appear, try scrolling</p>
                 <div id="input-preview" class="latex-box"></div>
 
 
@@ -34,7 +34,8 @@
                 </form>
 
                 <h2>Original expression</h2>
-                <p>Rearranged and simplified:</p>
+                <p class="scroll-message">If the entire input doesn't appear, try scrolling</p>
+                <h3>Rearranged and simplified:</h3>
                 <div id="input-simplified" class="latex-box"></div>
 
                 <form id="simplify">
@@ -45,13 +46,16 @@
             </div>
 
             <h2>Differentiated expression</h2>
-            <button type="button" id="show-steps">Steps</button>
+            <button type="button" id="show-steps">Steps <p id="show-steps-icon">+</p></button>
             <div id="steps">
-              <p>Lorem ipsum...</p>
+              <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis pharetra lobortis tincidunt. Morbi at enim lacus. Morbi nibh elit, aliquet non mi nec, condimentum tempus nunc. Vestibulum semper suscipit sem ac dapibus. Nullam mollis tempus libero, eget hendrerit massa. Curabitur vitae ipsum ultrices, auctor sem tristique, malesuada massa. Suspendisse arcu sem, egestas sit amet est eu, vestibulum sollicitudin ante. Phasellus elementum vulputate neque eu ultrices. Pellentesque non vestibulum elit. Quisque ultricies elementum mi, non ultricies mi auctor eget. Fusce sem nunc, suscipit posuere placerat sit amet, commodo sit amet justo. Vestibulum ut placerat nulla. Proin ac ligula imperdiet, lacinia lorem nec, rhoncus lacus. Sed luctus dui eget lorem bibendum rhoncus sed at augue. Quisque ut urna non ante egestas accumsan. Suspendisse gravida molestie tempus.
+
+Integer auctor at tellus a commodo. Cras non eros tortor. Pellentesque porttitor malesuada orci a ultrices. Vivamus condimentum ipsum sed rhoncus convallis. Donec vehicula dolor vitae magna convallis, eu consectetur mauris porttitor. Sed sit amet sagittis mi, eu eleifend purus. Integer imperdiet nulla non nunc egestas, ut rutrum eros aliquet. Curabitur massa arcu, dapibus non malesuada at, venenatis quis neque. Vivamus tincidunt, ante tempor vulputate vulputate, diam orci sagittis diam, sit amet imperdiet mauris elit vitae dolor. Vestibulum in metus eu quam dictum feugiat. Praesent eget lectus leo. Sed efficitur purus elit, non fermentum elit pellentesque eu. In interdum, nibh quis suscipit pulvinar, orci est tempus mauris, quis feugiat est purus sit amet quam. Suspendisse in semper risus. Aenean elementum nunc in posuere blandit.</p>
             </div>
 
             <div id="lower-section">
-                <p>Rearranged and simplified:</p>
+                <p class="scroll-message">If the entire input doesn't appear, try scrolling</p>
+                <h3>Rearranged and simplified:</h3>
                 <div id="differentiated-result" class="latex-box"></div>
             </div>
         </div>

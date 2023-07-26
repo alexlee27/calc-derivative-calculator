@@ -7,10 +7,18 @@ h1 {
 h2 {
     font-size: 35px;
     margin: 10px;
+    margin-top: 0;
+}
+
+h3 {
+    font-size: 18px;
+    margin: 10px;
+    margin-top: 0;
 }
 
 p {
     margin: 10px;
+    margin-top: 0;
 }
 
 * {
@@ -24,6 +32,7 @@ body {
     font-size: 18px;
     width: 100vw;
     margin: 0px;
+    background-color: #a9ccb1;
 }
 
 #menu {
@@ -161,14 +170,23 @@ input {
     color: white;
     background-color: #8ab593;
     border: 0;
-    text-align: left;
     padding-left: 20px;
     padding-right: 20px;
     cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
+
 
 #steps {
     padding: 0 18px;
-    display: none;
+    max-height: 0;
     overflow: hidden;
+    transition: max-height 0.2s ease-out;
+}
+
+#show-steps > p {
+    color: white;
+    margin: 0;
 }
