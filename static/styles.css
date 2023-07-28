@@ -108,7 +108,7 @@ body {
     margin-bottom: 20px;
 }
 
-input {
+input, button {
     font-family: 'Karla', sans-serif;
     font-size: 18px;
     border: 0;
@@ -127,7 +127,7 @@ input {
     padding-right: 30px;
 }
 
-#submit-button, #simplify-submit {
+#submit-button, #simplify-submit, #clear-steps {
     height: 100%;
     font-weight: bold;
     color: white;
@@ -137,21 +137,15 @@ input {
     padding-right: 15px;
 }
 
-#submit-button:hover , #simplify-submit:hover {
+#submit-button:hover , #simplify-submit:hover, #clear-steps:hover {
     background-color: #d64118;
     cursor: pointer;
 }
 
-#submit-button:active , #simplify-submit:active {
+#submit-button:active , #simplify-submit:active, #clear-steps:active {
     background-color: #ad3621;
 }
 
-#simplify {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    height: 40px;
-}
 
 #input-preview * {
     color: #154899;
@@ -191,4 +185,20 @@ input {
 #show-steps > p {
     color: white;
     margin: 0;
+}
+
+#button-box {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+#simplify, #clear-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    margin-left: 20px;
+    margin-right: 20px;
 }

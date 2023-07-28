@@ -24,6 +24,7 @@ from typing import *
 # todo: log simplification
 #  todo: -x^3 -1 -1
 # todo: enable clearing steps in html
+# todo: debug simplification/trig simplification for sin(x)+cos(x)+tan(x)+cot(x)+csc(x)+sec(x)
 
 
 class Expr:
