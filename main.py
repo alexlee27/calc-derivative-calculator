@@ -401,7 +401,7 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
                 prev2, curr = curr, curr.simplify(expand=expand)
                 print('prev2: ' + str(prev2))
                 print('curr : ' + str(curr))
-        simplified_input = curr.trig_simplify().fractionify()
+        simplified_input = curr.rearrange().trig_simplify().rearrange().fractionify()
 
         differentiated, steps = simplified_input.differentiate(variable)
         print('differentiated')
@@ -421,7 +421,7 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
             # print(simplified)
         # todo: toggle below for graph
         # visualization_runner(curr)
-        differentiated = curr.trig_simplify().fractionify()
+        differentiated = curr.rearrange().trig_simplify().rearrange().fractionify()
         steps_latex = [item.get_latex() for item in steps]
         return "\\displaystyle " + simplified_input.get_latex(), "\\displaystyle " + differentiated.get_latex(),\
             str(simplified_input), str(differentiated), steps_latex

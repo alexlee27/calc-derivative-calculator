@@ -19,12 +19,16 @@ from typing import *
 # implemented logarithm rules
 # implemented something + ( -1 * something ) = 0 simplification
 # implemented a ^ (b + c) = a^b * a^c (where b + c can't be simplified)
-# todo: a + b/c, a/b + c
-# todo: detect a/b as digit
+# implemented simplification of a + b/c, a/b + c
+# detected a/b as digit
 # todo: log simplification
-#  todo: -x^3 -1 -1
-# todo: enable clearing steps in html
-# todo: debug simplification/trig simplification for sin(x)+cos(x)+tan(x)+cot(x)+csc(x)+sec(x)
+# debugged -x^3 -1 -1
+# enabled clearing steps in html
+# debugged simplification/trig simplification for sin(x)+cos(x)+tan(x)+cot(x)+csc(x)+sec(x)
+# todo: differentiation for powers with fraction exponents
+# todo: arrangement order for a/b
+# todo: arccsc, arcsec, arccot
+# todo: float -> a/b
 
 
 class Expr:
@@ -189,6 +193,7 @@ class Expr:
                         return False
                     i += 1
             elif self_type == 'Digit':
+                # todo a/b
                 # Const > Const ^ Digit > Const ^ Non-digit
                 if isinstance(self, Pow) and isinstance(other, Pow):
                     self_exp_type = get_arrangement_type(self_exponent)[0]
@@ -416,7 +421,25 @@ class Plus(BinOp):
             common_denom = lcm(b, d)
             b_multiplier = common_denom // b
             d_multiplier = common_denom // d
-            return Multiply(Const(a * b_multiplier + c * d_multiplier), Pow(Const(common_denom), Const(-1)))
+            return Multiply(Const(a * b_multiplier + c * d_multiplier), Pow(Const(common_denom), Const(-1))).simplify(expand)
+
+        # a + b/c, where a, b, c are numbers
+        if isinstance(self.left, Const) and isinstance(self.left.name, int) and \
+                isinstance(self.right, Multiply) and isinstance(self.right.left, Const) and \
+                isinstance(self.right.left.name, int) and \
+                isinstance(self.right.right, Pow) and isinstance(self.right.right.left, Const) and \
+                isinstance(self.right.right.left.name, int) and \
+                isinstance(self.right.right.right, Const) and self.right.right.right.name == -1:
+            return Plus(Multiply(self.left, Pow(Const(1), Const(-1))), self.right).simplify(expand)
+
+        # a/b + c, where a, b, c are numbers
+        if isinstance(self.right, Const) and isinstance(self.right.name, int) and \
+                isinstance(self.left, Multiply) and isinstance(self.left.left, Const) and \
+                isinstance(self.left.left.name, int) and \
+                isinstance(self.left.right, Pow) and isinstance(self.left.right.left, Const) and \
+                isinstance(self.left.right.left.name, int) and \
+                isinstance(self.left.right.right, Const) and self.left.right.right.name == -1:
+            return Plus(self.left, Multiply(self.right, Pow(Const(1), Const(-1)))).simplify(expand)
 
         # if not expand:
         #     # something1 / expr1 + something2 / expr2 = (something1 * expr2 + something2 * expr1) / (expr1 * expr2)
@@ -683,8 +706,10 @@ class Multiply(BinOp):
         if isinstance(self.left, Pow) and isinstance(self.right, Pow):
             # Same bases
             if str(self.left.left) == str(self.right.left):
-                exponents_simplified = Plus(self.left.right.simplify(expand),
-                                            self.right.right.simplify(expand)).simplify(expand)
+                exponents_simplified = Plus(self.left.right.simplify(expand).fractionify(),
+                                            self.right.right.simplify(expand).fractionify()).simplify(expand)
+                # Adding fractionify for cases like 2 + 2 ^ (-1)
+
                 # If the exponents can get simplified:
                 if str(exponents_simplified) != str(Plus(self.left.right, self.right.right)):
                     return Pow(self.left.left.simplify(expand),
@@ -699,14 +724,14 @@ class Multiply(BinOp):
 
         # (base ^ exp) * base
         if isinstance(self.left, Pow) and str(self.left.left) == str(self.right):
-            exponents_simplified = Plus(self.left.right.simplify(expand), Const(1)).simplify(expand)
+            exponents_simplified = Plus(self.left.right.simplify(expand).fractionify(), Const(1)).simplify(expand)
             # If the exponents can get simplified
             if str(exponents_simplified) != str(Plus(self.left.right, Const(1))):
                 return Pow(self.right.simplify(expand), exponents_simplified)
 
         # base * (base ^ exp)
         if isinstance(self.right, Pow) and str(self.right.left) == str(self.left):
-            exponents_simplified = Plus(self.right.right.simplify(expand), Const(1)).simplify(expand)
+            exponents_simplified = Plus(self.right.right.simplify(expand).fractionify(), Const(1)).simplify(expand)
             # If the exponents can get simplified
             if str(exponents_simplified) != str(Plus(self.right.right, Const(1))):
                 return Pow(self.left.simplify(expand), exponents_simplified)
@@ -723,9 +748,14 @@ class Multiply(BinOp):
             numerator = self.left.name
             denominator = self.right.left.name
             divisor = gcd(numerator, denominator)
-            return Multiply(Const(numerator // divisor), Pow(Const(denominator // divisor), Const(-1))) \
- \
-                #       *
+
+            new_denominator = denominator // divisor
+            if new_denominator == 1:
+                return Const(numerator // divisor)
+            else:
+                return Multiply(Const(numerator // divisor), Pow(Const(new_denominator), Const(-1)))
+
+        #       *
         #      / \
         #     *   A
         #    / \
@@ -1051,7 +1081,7 @@ class Multiply(BinOp):
                             else:
                                 return Multiply(Trig('csc', arg), Pow(Trig('cot', arg), Const(cos_exp_abs)))
                         else:  # sin_exp_abs == cos_exp_abs
-                            Pow(Trig('cot', arg), Const(sin_exp_abs))
+                            return Pow(Trig('cot', arg), Const(sin_exp_abs))
 
         # sin * cos ^ n
         if isinstance(self.left, Trig) and isinstance(self.right, Pow) and isinstance(self.right.left, Trig):
@@ -1467,6 +1497,11 @@ class Pow(BinOp):
         return Pow(self.left.trig_simplify(), self.right.trig_simplify())
 
     def fractionify(self) -> Expr:
+        negative, abs_of_exponent = is_minus(self.right)
+        if negative:
+            if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
+                return Multiply(Const(1), Pow(self.left, Const(-1)))
+            return Multiply(Const(1), Pow(Pow(self.left, abs_of_exponent), Const(-1)))
         return Pow(self.left.fractionify(), self.right.fractionify())
 
 
@@ -1739,22 +1774,25 @@ class Log(Func):
             return Const(0)
 
         base_simplified = self.base.simplify(expand)
+        arg_simplified = self.arg.simplify(expand)
 
         # logb(m * n) = logb(m) + logb(n)
         if isinstance(self.arg, Multiply):
-            return Plus(Log(base_simplified, self.arg.left.simplify(expand)).simplify(expand),
-                        Log(base_simplified, self.arg.right.simplify(expand)).simplify(expand)).simplify(expand)
+            if str(arg_simplified) == str(self.arg):
+                return Plus(Log(base_simplified, self.arg.left.simplify(expand)).simplify(expand),
+                            Log(base_simplified, self.arg.right.simplify(expand)).simplify(expand)).simplify(expand)
 
         # logb(m ^ n) = n * logb(m)
         if isinstance(self.arg, Pow):
-            return Multiply(self.arg.right.simplify(expand),
-                            Log(base_simplified, self.arg.left.simplify(expand)).simplify(expand)).simplify(expand)
+            if str(arg_simplified) == str(self.arg):
+                return Multiply(self.arg.right.simplify(expand),
+                                Log(base_simplified, self.arg.left.simplify(expand)).simplify(expand)).simplify(expand)
 
         if isinstance(base_simplified, Const):
-            return Log(base_simplified, self.arg.simplify(expand))
+            return Log(base_simplified, arg_simplified)
         else:
             # return ln(arg) / ln(base)
-            return Multiply(Log(Const('e'), self.arg.simplify(expand)).simplify(expand),
+            return Multiply(Log(Const('e'), arg_simplified).simplify(expand),
                             Pow(Log(Const('e'), base_simplified).simplify(expand), Const(-1)).simplify(
                                 expand)).simplify(expand)
 
@@ -1797,6 +1835,11 @@ def get_arrangement_type(expr: Expr) -> tuple:  # TODO: TEST
     if isinstance(expr, Const) and (isinstance(expr.name, int) or isinstance(expr.name, float)):
         return ('Digit', expr, Const(1), Const(1), None, None)  # 18
     if isinstance(expr, Multiply):
+        if isinstance(expr.left, Const) and isinstance(expr.left.name, int) and \
+                isinstance(expr.right, Pow) and isinstance(expr.right.left, Const) and \
+                isinstance(expr.right.left.name, int) and \
+                isinstance(expr.right.right, Const) and expr.right.right.name == -1:
+            return ('Digit', expr, Const(1), Const(1), None, None)  # 20
         expr_left_type = get_arrangement_type(expr.left)[0]
         if expr_left_type == 'Non-digit':
             if get_arrangement_type(expr.right)[0] == 'Non-digit':
