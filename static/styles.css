@@ -178,7 +178,8 @@ input, button {
     flex-direction: column;
     padding: 0 18px;
     max-height: 0;
-    overflow: hidden;
+    width: 100%;
+    overflow: auto;
     transition: max-height 0.2s ease-out;
 }
 

@@ -25,8 +25,8 @@ from typing import *
 # debugged -x^3 -1 -1
 # enabled clearing steps in html
 # debugged simplification/trig simplification for sin(x)+cos(x)+tan(x)+cot(x)+csc(x)+sec(x)
-# todo: differentiation for powers with fraction exponents
-# todo: arrangement order for a/b
+# implemented differentiation for powers with fraction exponents
+# implemented arrangement order for a/b
 # todo: arccsc, arcsec, arccot
 # todo: float -> a/b
 
@@ -193,8 +193,7 @@ class Expr:
                         return False
                     i += 1
             elif self_type == 'Digit':
-                # todo a/b
-                # Const > Const ^ Digit > Const ^ Non-digit
+                # Const == Const * (Const ^ -1) > Const ^ Digit > Const ^ Non-digit
                 if isinstance(self, Pow) and isinstance(other, Pow):
                     self_exp_type = get_arrangement_type(self_exponent)[0]
                     other_exp_type = get_arrangement_type(other_exponent)[0]
@@ -202,15 +201,35 @@ class Expr:
                         return True
                     elif self_exp_type == 'Digit' and other_exp_type == 'Non-digit':
                         return False
-                elif isinstance(self, Pow) and isinstance(other, Const):
+                if isinstance(self, Pow) and isinstance(other, Const):
                     return True
-                elif isinstance(self, Const) and isinstance(other, Pow):
+                if isinstance(self, Const) and isinstance(other, Pow):
                     return False
-                # At this point, both Const or Const ^ Digit or Const ^ Non-digit
-                elif isinstance(self_base, Const) and isinstance(other_base, Const):
+                if isinstance(self, Pow) and isinstance(other, Multiply):
+                    return True
+                if isinstance(self, Multiply) and isinstance(other, Pow):
+                    return False
+                # At this point, both (Const or a/b) or Const ^ Digit or Const ^ Non-digit
+                # Converting a/b into a float
+                if isinstance(self_base, Multiply) and isinstance(self_base.left, Const) and \
+                        isinstance(self_base.left.name, int) and \
+                        isinstance(self_base.right, Pow) and isinstance(self_base.right.left, Const) and \
+                        isinstance(self_base.right.left.name, int) and isinstance(self_base.right.right, Const) and \
+                        self_base.right.right.name == -1:
+                    self_base = Const(self_base.left.name / self_base.right.left.name)
+
+                # Converting a/b into a float
+                if isinstance(other_base, Multiply) and isinstance(other_base.left, Const) and \
+                        isinstance(other_base.left.name, int) and \
+                        isinstance(other_base.right, Pow) and isinstance(other_base.right.left, Const) and \
+                        isinstance(other_base.right.left.name, int) and isinstance(other_base.right.right, Const) and \
+                        other_base.right.right.name == -1:
+                    other_base = Const(other_base.left.name / other_base.right.left.name)
+
+                if isinstance(self_base, Const) and isinstance(other_base, Const):
                     if self_base.name < other_base.name:
                         return True
-                    elif self_base.name > other_base.name:
+                    if self_base.name > other_base.name:
                         return False
                     if isinstance(self, Pow):
                         if self_exponent < other_exponent:
@@ -375,7 +394,10 @@ class Plus(BinOp):
         return self.left.get_latex() + '+ ' + self.right.get_latex()
 
     def differentiate(self, respect_to: str) -> tuple[Expr, list]:
-        steps = [Plus(Diff(self.left, respect_to), Diff(self.right, respect_to))]
+        if not isinstance(self.left, Plus) and not isinstance(self.right, Plus):
+            steps = [Plus(Diff(self.left, respect_to), Diff(self.right, respect_to))]
+        else:
+            steps = []
         left_differentiated, left_steps = self.left.differentiate(respect_to)
         right_differentiated, right_steps = self.right.differentiate(respect_to)
         for item in left_steps:
@@ -421,7 +443,8 @@ class Plus(BinOp):
             common_denom = lcm(b, d)
             b_multiplier = common_denom // b
             d_multiplier = common_denom // d
-            return Multiply(Const(a * b_multiplier + c * d_multiplier), Pow(Const(common_denom), Const(-1))).simplify(expand)
+            return Multiply(Const(a * b_multiplier + c * d_multiplier), Pow(Const(common_denom), Const(-1))).simplify(
+                expand)
 
         # a + b/c, where a, b, c are numbers
         if isinstance(self.left, Const) and isinstance(self.left.name, int) and \
@@ -642,6 +665,11 @@ class Multiply(BinOp):
         return left_latex + '\\cdot ' + right_latex
 
     def differentiate(self, respect_to: str) -> tuple[Expr, list]:
+        left_type = get_arrangement_type(self.left)[0]
+        right_type = get_arrangement_type(self.right)[0]
+        if left_type in {'Non-digit', 'Digit'} and right_type in {'Non-digit', 'Digit'}:
+            return Const(0), [Const(0)]
+
         if isinstance(self.left, Const) and not isinstance(self.right, Const):
             steps = [Multiply(self.left, Diff(self.right, respect_to))]
             right_differentiated, right_steps = self.right.differentiate(respect_to)
@@ -656,14 +684,30 @@ class Multiply(BinOp):
                 steps.append(Multiply(self.right, item))
             return Multiply(self.right, left_differentiated), steps
 
-        steps = [Plus(Multiply(Diff(self.left, respect_to), self.right),
-                      Multiply(self.left, Diff(self.right, respect_to)))]
+        def expand(expr: Multiply) -> Expr:
+            """Expand the Multiply expression. Only used in Multiply.differentiate.
+            """
+            if isinstance(expr.left, Plus):
+                return Plus(expand(Multiply(expr.left.left, expr.right)),
+                            expand(Multiply(expr.left.right, expr.right)))
+            if isinstance(expr.right, Plus):
+                return Plus(expand(Multiply(expr.left, expr.right.left)),
+                            expand(Multiply(expr.left, expr.right.right)))
+            return expr
+
+        if not isinstance(self.left, Multiply) and not isinstance(self.right, Multiply):
+            steps = [Plus(Multiply(Diff(self.left, respect_to), self.right),
+                          Multiply(self.left, Diff(self.right, respect_to)))]
+        else:
+            steps = []
+
         left_differentiated, left_steps = self.left.differentiate(respect_to)
         right_differentiated, right_steps = self.right.differentiate(respect_to)
         for item in left_steps:
-            steps.append(Plus(Multiply(item, self.right), Multiply(self.left, Diff(self.right, respect_to))))
+            steps.append(Plus(expand(Multiply(item, self.right)), Multiply(self.left, Diff(self.right, respect_to))))
+        left_expanded = expand(Multiply(left_steps[-1], self.right))
         for item in right_steps:
-            steps.append(Plus(Multiply(left_steps[-1], self.right), Multiply(self.left, item)))
+            steps.append(Plus(left_expanded, expand(Multiply(self.left, item))))
 
         return Plus(Multiply(left_differentiated, self.right),
                     Multiply(self.left, right_differentiated)), steps
@@ -1357,16 +1401,31 @@ class Pow(BinOp):
             return Multiply(Multiply(self.right,
                                      Pow(self.left, Const(self.right.name - 1))), left_differentiated), steps
 
-        # Power rule for str exponents
-        if not isinstance(self.left, Const) and isinstance(self.right, Const) and isinstance(self.right.name, str):
-            steps = [Multiply(Multiply(self.right,
-                                       Pow(self.left, Plus(self.right, Const(-1)))), Diff(self.left, respect_to))]
-            left_differentiated, left_steps = self.left.differentiate(respect_to)
-            for item in left_steps:
-                steps.append(Multiply(Multiply(self.right,
-                                               Pow(self.left, Plus(self.right, Const(-1)))), item))
-            return Multiply(Multiply(self.right,
-                                     Pow(self.left, Plus(self.right, Const(-1)))), left_differentiated), steps
+        # # Power rule for str exponents
+        # if not isinstance(self.left, Const) and isinstance(self.right, Const) and isinstance(self.right.name, str):
+        #     steps = [Multiply(Multiply(self.right,
+        #                                Pow(self.left, Plus(self.right, Const(-1)))), Diff(self.left, respect_to))]
+        #     left_differentiated, left_steps = self.left.differentiate(respect_to)
+        #     for item in left_steps:
+        #         steps.append(Multiply(Multiply(self.right,
+        #                                        Pow(self.left, Plus(self.right, Const(-1)))), item))
+        #     return Multiply(Multiply(self.right,
+        #                              Pow(self.left, Plus(self.right, Const(-1)))), left_differentiated), steps
+
+        base_type = get_arrangement_type(self.left)[0]
+        exp_type = get_arrangement_type(self.right)[0]
+        if exp_type in {'Non-digit', 'Digit'}:
+            if base_type in {'Non-digit', 'Digit'}:
+                return Const(0), [Const(0)]
+            else:
+                steps = [Multiply(Multiply(self.right,
+                                           Pow(self.left, Plus(self.right, Const(-1)))), Diff(self.left, respect_to))]
+                left_differentiated, left_steps = self.left.differentiate(respect_to)
+                for item in left_steps:
+                    steps.append(Multiply(Multiply(self.right,
+                                                   Pow(self.left, Plus(self.right, Const(-1)))), item))
+                return Multiply(Multiply(self.right,
+                                         Pow(self.left, Plus(self.right, Const(-1)))), left_differentiated), steps
 
         # e ^ f(x)
         if isinstance(self.left, Const) and self.left.name == 'e' and not isinstance(self.right, Const):

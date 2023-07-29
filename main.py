@@ -391,7 +391,7 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
         curr = expr
         # Simplifying input first
         while str(curr) != str(prev1):
-            prev1, curr = curr, curr.rearrange().fractionify()
+            prev1, curr = curr, curr.rearrange()  #.fractionify()
             print('prev1: ' + str(prev1))
             print('curr : ' + str(curr))
 
@@ -408,7 +408,7 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
         prev1 = None
         curr = differentiated
         while str(curr) != str(prev1):
-            prev1, curr = curr, curr.rearrange().fractionify()
+            prev1, curr = curr, curr.rearrange()  #.fractionify()
             print('prev1: ' + str(prev1))
             print('curr : ' + str(curr))
 
