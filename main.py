@@ -40,6 +40,15 @@ class InvalidInputError(CustomError):
     msg = 'Please check your input.'
 
 
+class DecimalError(CustomError):
+    """Raised when the user attempts to input a decimal.
+
+    Instance Attributes:
+        - msg: the error message
+    """
+    msg = 'Please enter decimals as fractions.'
+
+
 def tokenizer(text: str) -> list[str]:
     """Converts a string math input into a list of tokens that can be processed by the parser function."""
     names_2_char = {'ln', 'pi'}
@@ -136,6 +145,8 @@ def tokenizer(text: str) -> list[str]:
                     i += 1
                 result.append(token_accumlator)
                 prev_type = 'digit'
+            elif text[i] == '.':
+                raise DecimalError
             else:
                 raise InvalidInputError
         i += 1
@@ -380,7 +391,7 @@ def main() -> None:
     print('Program is done')
 
 
-def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[str, str, str, str, list]:
+def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[str, str, str, str, list, list, list]:
     """Differentiates the mathematical expression represented by input_text,
     returns a tuple in the form (input_simplfied_latex, differentiated_latex, input_simplified_string,
      differentiated_string, expand, steps_latex)
@@ -422,11 +433,13 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
         # todo: toggle below for graph
         # visualization_runner(curr)
         differentiated = curr.rearrange().trig_simplify().rearrange().fractionify()
-        steps_latex = [item.get_latex() for item in steps]
+        steps_latex = [item[0].get_latex() for item in steps]
+        steps_explanation = [item[1] for item in steps]
+        steps_explanation_latex = [item[2] for item in steps]
         return "\\displaystyle " + simplified_input.get_latex(), "\\displaystyle " + differentiated.get_latex(),\
-            str(simplified_input), str(differentiated), steps_latex
+            str(simplified_input), str(differentiated), steps_latex, steps_explanation, steps_explanation_latex
     elif isinstance(expr, CustomError):
-        return '\\text{' + expr.msg + '}', '', '', '', []
+        return '\\text{' + expr.msg + '}', '', '', '', [], [], []
 
 
 def input_preview(input_text: str, variable: str = 'x') -> str:
@@ -434,7 +447,7 @@ def input_preview(input_text: str, variable: str = 'x') -> str:
     """
     expr = string_to_expr(input_text, {variable})
     if isinstance(expr, Expr):
-        return expr.get_latex()
+        return Diff(expr, variable).get_latex()
     elif isinstance(expr, CustomError):
         return '\\text{' + expr.msg + '}'
 

@@ -21,14 +21,12 @@ from typing import *
 # implemented a ^ (b + c) = a^b * a^c (where b + c can't be simplified)
 # implemented simplification of a + b/c, a/b + c
 # detected a/b as digit
-# todo: log simplification
 # debugged -x^3 -1 -1
 # enabled clearing steps in html
 # debugged simplification/trig simplification for sin(x)+cos(x)+tan(x)+cot(x)+csc(x)+sec(x)
 # implemented differentiation for powers with fraction exponents
 # implemented arrangement order for a/b
 # todo: arccsc, arcsec, arccot
-# todo: float -> a/b
 
 
 class Expr:
@@ -327,12 +325,30 @@ class Num(Expr):
         self.name = name
 
     def __str__(self) -> str:
+        # if isinstance(self.name, float):
+        #     result = f'{self.name:.7f}'
+        #     i = len(result) - 1
+        #     while result[i] == '0':
+        #         i -= 1
+        #     if result[i] == '.':
+        #         return result[:i]
+        #     else:
+        #         return result[:i + 1]
         return str(self.name) + ' '
 
     # def __len__(self) -> int:
     #     return 1
 
     def get_latex(self) -> str:
+        # if isinstance(self.name, float):
+        #     result = f'{self.name:.7f}'
+        #     i = len(result) - 1
+        #     while result[i] == '0':
+        #         i -= 1
+        #     if result[i] == '.':
+        #         return result[:i]
+        #     else:
+        #         return result[:i + 1]
         return str(self.name) + ' '
 
 
@@ -395,15 +411,16 @@ class Plus(BinOp):
 
     def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if not isinstance(self.left, Plus) and not isinstance(self.right, Plus):
-            steps = [Plus(Diff(self.left, respect_to), Diff(self.right, respect_to))]
+            steps = [(Plus(Diff(self.left, respect_to), Diff(self.right, respect_to)), 'Differentiation is linear; differentiate each of the summands: ',
+                      f'\\displaystyle\\left[u_1({respect_to})+u_2({respect_to})+\\cdots+u_n({respect_to})\\right]\'=u_1\'({respect_to})+u_2\'({respect_to})+\\cdots+u_n\'({respect_to})')]
         else:
             steps = []
         left_differentiated, left_steps = self.left.differentiate(respect_to)
         right_differentiated, right_steps = self.right.differentiate(respect_to)
         for item in left_steps:
-            steps.append(Plus(item, Diff(self.right, respect_to)))
+            steps.append((Plus(item[0], Diff(self.right, respect_to)), item[1], item[2]))
         for item in right_steps:
-            steps.append(Plus(left_steps[-1], item))
+            steps.append((Plus(left_steps[-1][0], item[0]), item[1], item[2]))
         return Plus(left_differentiated, right_differentiated), steps
 
     def simplify(self, expand: bool) -> Expr:
@@ -667,21 +684,28 @@ class Multiply(BinOp):
     def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         left_type = get_arrangement_type(self.left)[0]
         right_type = get_arrangement_type(self.right)[0]
+        if respect_to != 'c':
+            constant_var = 'c'
+        else:
+            constant_var = 'a'
         if left_type in {'Non-digit', 'Digit'} and right_type in {'Non-digit', 'Digit'}:
-            return Const(0), [Const(0)]
+            return Const(0), [(Const(0), 'The derivative of a constant is zero: ',
+                              f'\\displaystyle {constant_var}\'=0')]
 
         if isinstance(self.left, Const) and not isinstance(self.right, Const):
-            steps = [Multiply(self.left, Diff(self.right, respect_to))]
+            steps = [(Multiply(self.left, Diff(self.right, respect_to)), 'Differentiation is linear; pull out constant factors: ',
+                      f'\\displaystyle\\left[{constant_var}\\cdot u({respect_to})\\right]\'={constant_var}\\cdot u\'({respect_to})')]
             right_differentiated, right_steps = self.right.differentiate(respect_to)
             for item in right_steps:
-                steps.append(Multiply(self.left, item))
+                steps.append((Multiply(self.left, item[0]), item[1], item[2]))
             return Multiply(self.left, right_differentiated), steps
 
         if isinstance(self.right, Const) and not isinstance(self.left, Const):
-            steps = [Multiply(self.right, Diff(self.left, respect_to))]
+            steps = [(Multiply(self.right, Diff(self.left, respect_to)), 'Differentiation is linear; pull out constant factors: ',
+                      f'\\displaystyle\\left[a\\{constant_var}dot u({respect_to})\\right]\'={constant_var}\\cdot u\'({respect_to})')]
             left_differentiated, left_steps = self.left.differentiate(respect_to)
             for item in left_steps:
-                steps.append(Multiply(self.right, item))
+                steps.append((Multiply(self.right, item[0]), item[1], item[2]))
             return Multiply(self.right, left_differentiated), steps
 
         def expand(expr: Multiply) -> Expr:
@@ -696,18 +720,19 @@ class Multiply(BinOp):
             return expr
 
         if not isinstance(self.left, Multiply) and not isinstance(self.right, Multiply):
-            steps = [Plus(Multiply(Diff(self.left, respect_to), self.right),
-                          Multiply(self.left, Diff(self.right, respect_to)))]
+            steps = [(Plus(Multiply(Diff(self.left, respect_to), self.right),
+                          Multiply(self.left, Diff(self.right, respect_to))), 'Apply the product rule: ',
+                      f'\\displaystyle\\left[u_1({respect_to})\\cdot u_2({respect_to})\\cdots u_n({respect_to})\\right]\'=u_1\'({respect_to})\\cdot u_2({respect_to})\\cdots u_n({respect_to})+u_1({respect_to})\\cdot u_2\'({respect_to})\\cdots u_n({respect_to})+\\cdots+u_1({respect_to})\\cdot u_2({respect_to})\\cdots u_n\'({respect_to})')]
         else:
             steps = []
 
         left_differentiated, left_steps = self.left.differentiate(respect_to)
         right_differentiated, right_steps = self.right.differentiate(respect_to)
         for item in left_steps:
-            steps.append(Plus(expand(Multiply(item, self.right)), Multiply(self.left, Diff(self.right, respect_to))))
-        left_expanded = expand(Multiply(left_steps[-1], self.right))
+            steps.append((Plus(expand(Multiply(item[0], self.right)), Multiply(self.left, Diff(self.right, respect_to))), item[1], item[2]))
+        left_expanded = expand(Multiply(left_steps[-1][0], self.right))
         for item in right_steps:
-            steps.append(Plus(left_expanded, expand(Multiply(self.left, item))))
+            steps.append((Plus(left_expanded, expand(Multiply(self.left, item[0]))), item[1], item[2]))
 
         return Plus(Multiply(left_differentiated, self.right),
                     Multiply(self.left, right_differentiated)), steps
@@ -1345,7 +1370,22 @@ class Const(Num):
             return super().get_latex()
 
     def differentiate(self, respect_to: str) -> tuple[Expr, list]:
-        return Const(0), [Const(0)]
+        if respect_to != 'c':
+            constant_var = 'c'
+        else:
+            constant_var = 'a'
+        return Const(0), [(Const(0), 'The derivative of a constant is zero: ', f'\\displaystyle {constant_var}\'=0')]
+
+    def simplify(self, expand: bool) -> Expr:
+        # if isinstance(self.name, float):
+        #     numerator = round(self.name, 7)
+        #     denominator = 1
+        #     while numerator != round(numerator):
+        #         numerator = round(numerator * 10, 7)
+        #         denominator *= 10
+        #     numerator = round(numerator)
+        #     return Multiply(Const(numerator), Pow(Const(denominator), Const(-1)))
+        return self
 
 
 class Pow(BinOp):
@@ -1368,8 +1408,8 @@ class Pow(BinOp):
         return '( ' + str(self.left) + ') ^ ( ' + str(self.right) + ') '
 
     def get_latex(self) -> str:
-        if isinstance(self.right, Const) and self.right.name == -1:
-            return '\\frac{1}{ ' + self.left.get_latex() + '} '
+        # if isinstance(self.right, Const) and self.right.name == -1:
+        #     return '\\frac{1}{ ' + self.left.get_latex() + '} '
         if isinstance(self.left, Trig):
             return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
         if isinstance(self.left, Log):
@@ -1386,18 +1426,23 @@ class Pow(BinOp):
         return '{ ' + left_latex + '} ' + '^ { ' + right_latex + '} '
 
     def differentiate(self, respect_to: str) -> tuple[Expr, list]:
+        if respect_to != 'c':
+            constant_var = 'c'
+        else:
+            constant_var = 'a'
         if isinstance(self.left, Const) and isinstance(self.right, Const):
-            return Const(0), [Const(0)]
+            return Const(0), [(Const(0), 'The derivative of a constant is zero: ', f'\\displaystyle {constant_var}\'=0')]
 
         # Power rule for int or float exponents
         if not isinstance(self.left, Const) and isinstance(self.right, Const) \
                 and (isinstance(self.right.name, int) or (isinstance(self.right.name, float))):
-            steps = [Multiply(Multiply(self.right,
-                                       Pow(self.left, Const(self.right.name - 1))), Diff(self.left, respect_to))]
+            steps = [(Multiply(Multiply(self.right,
+                                       Pow(self.left, Const(self.right.name - 1))), Diff(self.left, respect_to)), 'Applying the power rule and chain rule: ',
+                      f'\\displaystyle \\left[u^{{{constant_var}}}({respect_to})\\right]\'={constant_var}\\cdot u^{{{constant_var} - 1}}({respect_to})\\cdot u\'({respect_to})')]
             left_differentiated, left_steps = self.left.differentiate(respect_to)
             for item in left_steps:
-                steps.append(Multiply(Multiply(self.right,
-                                               Pow(self.left, Const(self.right.name - 1))), item))
+                steps.append((Multiply(Multiply(self.right,
+                                               Pow(self.left, Const(self.right.name - 1))), item[0]), item[1], item[2]))
             return Multiply(Multiply(self.right,
                                      Pow(self.left, Const(self.right.name - 1))), left_differentiated), steps
 
@@ -1416,34 +1461,38 @@ class Pow(BinOp):
         exp_type = get_arrangement_type(self.right)[0]
         if exp_type in {'Non-digit', 'Digit'}:
             if base_type in {'Non-digit', 'Digit'}:
-                return Const(0), [Const(0)]
+                return Const(0), [(Const(0), 'The derivative of a constant is zero: ', f'\\displaystyle {constant_var}\'=0')]
             else:
-                steps = [Multiply(Multiply(self.right,
-                                           Pow(self.left, Plus(self.right, Const(-1)))), Diff(self.left, respect_to))]
+                steps = [(Multiply(Multiply(self.right, Pow(self.left, Plus(self.right, Const(-1)))), Diff(self.left, respect_to)), 'Applying the power rule and chain rule: ',
+                      f'\\displaystyle \\left[u^{{{constant_var}}}({respect_to})\\right]\'={constant_var}\\cdot u^{{{constant_var} - 1}}({respect_to})\\cdot u\'({respect_to})')]
                 left_differentiated, left_steps = self.left.differentiate(respect_to)
                 for item in left_steps:
-                    steps.append(Multiply(Multiply(self.right,
-                                                   Pow(self.left, Plus(self.right, Const(-1)))), item))
+                    steps.append((Multiply(Multiply(self.right,
+                                                   Pow(self.left, Plus(self.right, Const(-1)))), item[0]), item[1], item[2]))
                 return Multiply(Multiply(self.right,
                                          Pow(self.left, Plus(self.right, Const(-1)))), left_differentiated), steps
 
         # e ^ f(x)
         if isinstance(self.left, Const) and self.left.name == 'e' and not isinstance(self.right, Const):
-            steps = [Multiply(self, Diff(self.right, respect_to))]
+            steps = [(Multiply(self, Diff(self.right, respect_to)), 'Rule for differentiating exponentials and chain rule: ',
+                      f'\\displaystyle \\left[e^{{u({respect_to})}}\\right]\'=e^{{u({respect_to})}}\\cdot u\'({respect_to})')]
             right_differentiated, right_steps = self.right.differentiate(respect_to)
             for item in right_steps:
-                steps.append(Multiply(self, item))
+                steps.append((Multiply(self, item[0]), item[1], item[2]))
             return Multiply(self, right_differentiated), steps
 
         # Const ^ f(x)
         if isinstance(self.left, Const) and not isinstance(self.right, Const):
-            steps = [Multiply(self, Multiply(Log(Const('e'), self.left), Diff(self.right, respect_to)))]
+            steps = [(Multiply(self, Multiply(Log(Const('e'), self.left), Diff(self.right, respect_to))),
+                      'Rule for differentiating exponentials and chain rule: ',
+                      f'\\displaystyle\\left[{{{constant_var}}}^{{u({respect_to})}}\\right]\'={{{constant_var}}}^{{u({respect_to})}}\\cdot \ln({constant_var})\\cdot u\'({respect_to})')]
             right_differentiated, right_steps = self.right.differentiate(respect_to)
             for item in right_steps:
-                steps.append(Multiply(self, Multiply(Log(Const('e'), self.left), item)))
+                steps.append((Multiply(self, Multiply(Log(Const('e'), self.left), item[0])), item[1], item[2]))
             return Multiply(self, Multiply(Log(Const('e'), self.left), right_differentiated)), steps
 
-        steps = [Diff(Pow(Const('e'), Multiply(self.right, Log(Const('e'), self.left))), respect_to)]
+        steps = [(Diff(Pow(Const('e'), Multiply(self.right, Log(Const('e'), self.left))), respect_to), 'Use the following identity: ',
+                  f'\\displaystyle{{u_1({respect_to})}}^{{u_2({respect_to})}}=e^{{u_2({respect_to})\\cdot \ln(u_1({respect_to}))}}')]
         differentiated, differentiated_steps = \
             Pow(Const('e'), Multiply(self.right, Log(Const('e'), self.left))).differentiate(respect_to)
         for item in differentiated_steps:
@@ -1604,10 +1653,15 @@ class Var(Num):
         super().__init__(name)
 
     def differentiate(self, respect_to: str) -> tuple[Expr, list]:
-        if respect_to == self.name:
-            return Const(1), [Const(1)]
+        if respect_to != 'c':
+            constant_var = 'c'
         else:
-            return Const(0), [Const(0)]
+            constant_var = 'a'
+        if respect_to == self.name:
+            return Const(1), [(Const(1), 'Differentiating the variable of differentiation gives 1: ',
+                              f'{respect_to}\'=1')]
+        else:
+            return Const(0), [(Const(0), 'The derivative of a constant is zero: ', f'\\displaystyle {constant_var}\'=0')]
 
 
 class Trig(Func):
@@ -1641,33 +1695,37 @@ class Trig(Func):
 
     def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if self.name == 'sin':
-            steps = [Multiply(Trig('cos', self.arg), Diff(self.arg, respect_to))]
+            steps = [(Multiply(Trig('cos', self.arg), Diff(self.arg, respect_to)), 'Apply the following trigonometric differentiation rule and the chain rule: ',
+                      f'\\displaystyle \\left[\\sin(u({respect_to}))\\right]\'=\\cos(u({respect_to}))\\cdot u\'({respect_to})')]
             arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
             for item in arg_steps:
-                steps.append(Multiply(Trig('cos', self.arg), item))
+                steps.append((Multiply(Trig('cos', self.arg), item[0]), item[1], item[2]))
             return Multiply(Trig('cos', self.arg), arg_differentiated), steps
         if self.name == 'cos':
-            steps = [Multiply(Multiply(Const(-1), Trig('sin', self.arg)), Diff(self.arg, respect_to))]
+            steps = [(Multiply(Multiply(Const(-1), Trig('sin', self.arg)), Diff(self.arg, respect_to)), 'Apply the following trigonometric differentiation rule and the chain rule: ',
+                      f'\\displaystyle \\left[\\cos(u({respect_to}))\\right]\'=-\\sin(u({respect_to}))\\cdot u\'({respect_to})')]
             arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
             for item in arg_steps:
-                steps.append(Multiply(Multiply(Const(-1), Trig('sin', self.arg)), item))
+                steps.append((Multiply(Multiply(Const(-1), Trig('sin', self.arg)), item[0]), item[1], item[2]))
             return Multiply(Multiply(Const(-1), Trig('sin', self.arg)), arg_differentiated), steps
         if self.name == 'tan':
-            steps = [Multiply(Pow(Trig('cos', self.arg), Const(-2)), Diff(self.arg, respect_to))]
+            steps = [(Multiply(Pow(Trig('cos', self.arg), Const(-2)), Diff(self.arg, respect_to)), 'Apply the following trigonometric differentiation rule and the chain rule: ',
+                      f'\\displaystyle \\left[\\tan(u({respect_to}))\\right]\'=\\sec^2(u({respect_to}))\\cdot u\'({respect_to})=\\cos^{{-2}}(u({respect_to}))\\cdot u\'({respect_to})')]
             arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
             for item in arg_steps:
-                steps.append(Multiply(Pow(Trig('cos', self.arg), Const(-2)), item))
+                steps.append((Multiply(Pow(Trig('cos', self.arg), Const(-2)), item[0]), item[1], item[2]))
             return Multiply(Pow(Trig('cos', self.arg), Const(-2)), arg_differentiated), steps
             # return Multiply(Pow(Trig('sec', self.arg), Const(2)),
             #                 self.arg.differentiate(respect_to)
             #                 )
         if self.name == 'sec':
-            steps = [Multiply(Multiply(Trig('sin', self.arg), Pow(Trig('cos', self.arg), Const(-2))),
-                              Diff(self.arg, respect_to))]
+            steps = [(Multiply(Multiply(Trig('sin', self.arg), Pow(Trig('cos', self.arg), Const(-2))),
+                              Diff(self.arg, respect_to)), 'Apply the following trigonometric differentiation rule and the chain rule: ',
+                      f'\\displaystyle \\left[\\sec(u({respect_to}))\\right]\'=\\sec(u({respect_to}))\\cdot\\tan(u({respect_to}))\\cdot u\'({respect_to})=\\sin(u({respect_to}))\\cdot\\cos^{{-2}}(u({respect_to}))\\cdot u\'({respect_to})')]
             arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
             for item in arg_steps:
-                steps.append(Multiply(Multiply(Trig('sin', self.arg), Pow(Trig('cos', self.arg), Const(-2))),
-                                      item))
+                steps.append((Multiply(Multiply(Trig('sin', self.arg), Pow(Trig('cos', self.arg), Const(-2))),
+                                      item[0]), item[1], item[2]))
             return Multiply(Multiply(Trig('sin', self.arg), Pow(Trig('cos', self.arg), Const(-2))),
                             arg_differentiated), steps
             # return Multiply(Trig('sec', self.arg),
@@ -1676,13 +1734,13 @@ class Trig(Func):
             #                          )
             #                 )
         if self.name == 'csc':
-            steps = [
-                Multiply(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))), Trig('cos', self.arg)),
-                         Diff(self.arg, respect_to))]
+            steps = [(Multiply(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))), Trig('cos', self.arg)),
+                         Diff(self.arg, respect_to)), 'Apply the following trigonometric differentiation rule and the chain rule: ',
+                 f'\\displaystyle \\left[\\csc(u({respect_to}))\\right]\'=-\\csc(u({respect_to}))\\cdot\\cot(u({respect_to}))\\cdot u\'({respect_to})=-\\sin^{{-2}}(u({respect_to}))\\cdot\\cos(u({respect_to}))\\cdot u\'({respect_to})')]
             arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
             for item in arg_steps:
-                steps.append(Multiply(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))),
-                                               Trig('cos', self.arg)), item))
+                steps.append((Multiply(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))),
+                                               Trig('cos', self.arg)), item[0]), item[1], item[2]))
             return Multiply(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))), Trig('cos', self.arg)),
                             arg_differentiated), steps
             # return Multiply(Const(-1),
@@ -1693,12 +1751,13 @@ class Trig(Func):
             #                          )
             #                 )
         if self.name == 'cot':
-            steps = [Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))),
-                              Diff(self.arg, respect_to))]
+            steps = [(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))),
+                              Diff(self.arg, respect_to)), 'Apply the following trigonometric differentiation rule and the chain rule: ',
+                 f'\\displaystyle \\left[\\cot(u({respect_to}))\\right]\'=-\\csc^{{2}}(u({respect_to}))\\cdot u\'({respect_to})=-\\sin^{{-2}}(u({respect_to}))\\cdot u\'({respect_to})')]
             arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
             for item in arg_steps:
-                steps.append(Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))),
-                                      item))
+                steps.append((Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))),
+                                      item[0]), item[1], item[2]))
             return Multiply(Multiply(Const(-1), Pow(Trig('sin', self.arg), Const(-2))),
                             arg_differentiated), steps
             # return Multiply(Const(-1),
@@ -1707,38 +1766,42 @@ class Trig(Func):
             #                          )
             #                 )
 
-        if self.name == 'arcsin':
-            steps = [Multiply(Diff(self.arg, respect_to),
+        if self.name == 'arcsin':  #todo did up to here steps
+            steps = [(Multiply(Diff(self.arg, respect_to),
                               Pow(Plus(Const(1),
                                        Multiply(Const(-1),
                                                 Pow(self.arg,
-                                                    Const(2)))), Multiply(Const(-1), Pow(Const(2), Const(-1)))))]
+                                                    Const(2)))), Multiply(Const(-1), Pow(Const(2), Const(-1))))),
+                      'Apply the following trigonometric differentiation rule and the chain rule: ',
+                      f'\\displaystyle \\left[\\arcsin(u({respect_to}))\\right]\'=\\frac{{u\'({respect_to})}}{{\\sqrt{{1-u^2({respect_to})}}}}=u\'(x)\\cdot (1-u^2({respect_to}))^{{\\frac{{-1}}{{2}}}}')]
             arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
             for item in arg_steps:
-                steps.append(Multiply(item,
+                steps.append((Multiply(item[0],
                                       Pow(Plus(Const(1),
                                                Multiply(Const(-1),
                                                         Pow(self.arg,
                                                             Const(2)))),
-                                          Multiply(Const(-1), Pow(Const(2), Const(-1))))))
+                                          Multiply(Const(-1), Pow(Const(2), Const(-1))))), item[1], item[2]))
             return Multiply(arg_differentiated,
                             Pow(Plus(Const(1),
                                      Multiply(Const(-1),
                                               Pow(self.arg,
                                                   Const(2)))), Multiply(Const(-1), Pow(Const(2), Const(-1))))), steps
         if self.name == 'arccos':
-            steps = [Multiply(Const(-1), Diff(Trig('arcsin', self.arg), respect_to))]
+            steps = [(Multiply(Const(-1), Diff(Trig('arcsin', self.arg), respect_to)), 'Use the following identity: ',
+                      f'\\displaystyle \\left[\\arccos(u({respect_to}))\\right]\'=-\\left[\\arcsin(u({respect_to}))\\right]\'')]
             differentiated, differentiated_steps = Trig('arcsin', self.arg).differentiate(respect_to)
             for item in differentiated_steps:
-                steps.append(Multiply(Const(-1), item))
+                steps.append((Multiply(Const(-1), item[0]), item[1], item[2]))
             return Multiply(Const(-1), differentiated), steps
         if self.name == 'arctan':
-            steps = [Multiply(Diff(self.arg, respect_to),
-                              Pow(Plus(Pow(self.arg, Const(2)), Const(1)), Const(-1)))]
+            steps = [(Multiply(Diff(self.arg, respect_to),
+                              Pow(Plus(Pow(self.arg, Const(2)), Const(1)), Const(-1))), 'Apply the following trigonometric differentiation rule and the chain rule: ',
+                      f'\\displaystyle \\left[\\arctan(u({respect_to}))\\right]\'=\\frac{{u\'({respect_to})}}{{u^2({respect_to})+1}}=u\'({respect_to})\\cdot (u^2({respect_to})+1)^{{-1}}')]
             arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
             for item in arg_steps:
-                steps.append(Multiply(item,
-                                      Pow(Plus(Pow(self.arg, Const(2)), Const(1)), Const(-1))))
+                steps.append((Multiply(item[0],
+                                      Pow(Plus(Pow(self.arg, Const(2)), Const(1)), Const(-1))), item[1], item[2]))
             return Multiply(arg_differentiated,
                             Pow(Plus(Pow(self.arg, Const(2)), Const(1)), Const(-1))), steps
 
@@ -1798,27 +1861,35 @@ class Log(Func):
             return '\\log_{' + self.base.get_latex() + '} \\left( ' + self.arg.get_latex() + '\\right) '
 
     def differentiate(self, respect_to: str) -> tuple[Expr, list]:
+        if respect_to != 'c':
+            constant_var = 'c'
+        else:
+            constant_var = 'a'
+
         if isinstance(self.base, Const):
             if not isinstance(self.arg, Const):
                 if self.base.name == 'e':
-                    steps = [Multiply(Diff(self.arg, respect_to), Pow(self.arg, Const(-1)))]
+                    steps = [(Multiply(Diff(self.arg, respect_to), Pow(self.arg, Const(-1))), 'Apply the following logarithm differentiation rule: ',
+                              f'\\left[\\ln(u({respect_to}))\\right]\'=\\displaystyle \\frac{{u\'({respect_to})}}{{u({respect_to})}}=u\'({respect_to})\\cdot (u({respect_to}))^{{-1}}')]
                     arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
                     for item in arg_steps:
-                        steps.append(Multiply(item, Pow(self.arg, Const(-1))))
+                        steps.append((Multiply(item[0], Pow(self.arg, Const(-1))), item[1], item[2]))
                     return Multiply(arg_differentiated, Pow(self.arg, Const(-1))), steps
                 else:
-                    steps = [Multiply(Diff(self.arg, respect_to),
-                                      Pow(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1)))]
+                    steps = [(Multiply(Diff(self.arg, respect_to),
+                                      Pow(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1))), 'Apply the following logarithm differentiation rule: ',
+                              f'\\displaystyle \\left[\\log_{{{constant_var}}}(u({respect_to}))\\right]\'= \\frac{{u\'({respect_to})}}{{\\ln({constant_var})\\cdot u({respect_to})}}=u\'({respect_to})\\cdot (\\ln({constant_var})\\cdot u({respect_to}))^{{-1}}')]
                     arg_differentiated, arg_steps = self.arg.differentiate(respect_to)
                     for item in arg_steps:
-                        steps.append(Multiply(item,
-                                              Pow(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1))))
+                        steps.append((Multiply(item[0],
+                                              Pow(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1))), item[1], item[2]))
                     return Multiply(arg_differentiated,
                                     Pow(Multiply(self.arg, Log(Const('e'), self.base)), Const(-1))), steps
             else:
                 # Then it is a constant!
-                return Const(0), [Const(0)]
-        steps = [Diff(Multiply(Log(Const('e'), self.arg), Pow(Log(Const('e'), self.base), Const(-1))), respect_to)]
+                return Const(0), [(Const(0), 'The derivative of a constant is zero: ', f'\\displaystyle {constant_var}\'=0')]
+        steps = [(Diff(Multiply(Log(Const('e'), self.arg), Pow(Log(Const('e'), self.base), Const(-1))), respect_to), 'Use the following identity: ',
+                  f'\\displaystyle\\log_{{u_1({respect_to})}}(u_2({respect_to}))=\\frac{{\\ln({{u_2({respect_to})}})}}{{\\ln(u_1({respect_to}))}}=\\ln({{u_2({respect_to})}})\\cdot (\\ln(u_1({respect_to})))^{{-1}}')]
         differentiated, differentiated_steps = \
             Multiply(Log(Const('e'), self.arg), Pow(Log(Const('e'), self.base), Const(-1))).differentiate(respect_to)
         for item in differentiated_steps:

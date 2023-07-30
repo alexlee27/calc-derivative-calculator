@@ -1,14 +1,14 @@
 let coll = document.getElementById("show-steps");
 let content = document.getElementById("steps");
+let icon = document.getElementById("show-steps-icon");
 coll.addEventListener("click", function() {
-    this.classList.toggle("active");
+//    this.classList.toggle("active");
     if (content.style.maxHeight){
       content.style.maxHeight = null;
     } else {
       content.style.maxHeight = content.scrollHeight + "px";
     }
 
-    let icon = document.getElementById("show-steps-icon");
     if (icon.textContent === "+") {
         icon.textContent = "−"; // U+2212; not a hyphen
     }
@@ -20,8 +20,10 @@ coll.addEventListener("click", function() {
 let clearSteps = document.getElementById("clear-steps");
 clearSteps.addEventListener("click", function() {
     while (content.firstChild) {
-    content.removeChild(content.lastChild);
-  }
+        content.removeChild(content.lastChild);
+    }
+    content.style.maxHeight = null;
+    icon.textContent = "+";
 });
 
 // All jQuery code goes below
@@ -47,6 +49,8 @@ $(document).ready(function () {
                 let differentiated_string = response.differentiated_string;
                 let expand = response.expand;
                 let steps_latex = response.steps_latex;
+                let steps_explanation = response.steps_explanation;
+                let steps_explanation_latex = response.steps_explanation_latex;
 
                 input_simplified = "$$" + input_simplified + "$$";
                 differentiated = "$$" + differentiated + "$$";
@@ -68,9 +72,14 @@ $(document).ready(function () {
                 $steps.empty();
 
                 for (let i = 0; i < steps_latex.length; i++) {
+                    explanation = "<div class=\"explanation\"><span>" + steps_explanation[i] + "</span>$$" + steps_explanation_latex[i] + "$$</div>";
                     step = "<div>$$" + steps_latex[i] + "$$</div>";
+                    $steps.append(explanation);
                     $steps.append(step);
                 }
+
+                content.style.maxHeight = null;
+                icon.textContent = "+";
 
                 MathJax.typesetPromise();
                 OverflowChangeStyle("input-simplified");
@@ -89,6 +98,7 @@ $(document).ready(function () {
         const $steps = $("#steps");
 
         $steps.empty();
+        icon.textContent = "+";
 
         $.ajax({
             type: "POST",
@@ -134,6 +144,8 @@ $(document).ready(function () {
                 let differentiated_string = response.differentiated_string;
                 let expand = response.expand;
                 let steps_latex = response.steps_latex;
+                let steps_explanation = response.steps_explanation;
+                let steps_explanation_latex = response.steps_explanation_latex;
 
                 input_simplified = "$$" + input_simplified + "$$";
                 differentiated = "$$" + differentiated + "$$";
@@ -155,9 +167,14 @@ $(document).ready(function () {
                 $steps.empty();
 
                 for (let i = 0; i < steps_latex.length; i++) {
+                    explanation = "<div class=\"explanation\"><span>" + steps_explanation[i] + "</span>$$" + steps_explanation_latex[i] + "$$</div>";
                     step = "<div>$$" + steps_latex[i] + "$$</div>";
+                    $steps.append(explanation);
                     $steps.append(step);
                 }
+
+                content.style.maxHeight = null;
+                icon.textContent = "+";
 
                 MathJax.typesetPromise();
                 OverflowChangeStyle("input-simplified");
@@ -180,9 +197,20 @@ function toggleExpandCheckbox() {
 
 function changeLaTeXStyle(idName, fontSize) {
     let div = document.getElementById(idName);
-    let latex = div.getElementsByClassName("MathJax CtxtMenu_Attached_0")[0]
-    latex.setAttribute("style", "font-size: " + fontSize.toString() + "%;");
+    let lst = div.getElementsByClassName("MathJax CtxtMenu_Attached_0")
+    for (let i = 0; i < lst.length; i++){
+        let latex = lst[i]
+        latex.setAttribute("style", "font-size: " + fontSize.toString() + "%;");
+    }
 }
+
+//function changeLaTeXStyleByClass(className, fontSize) {
+//    let lst1 = document.getElementsByClassName(className);
+//    for (let i = 0; i < lst1.length; i++) {
+//        let latex = lst1[i].getElementsByClassName("MathJax CtxtMenu_Attached_0")[0]
+//        latex.setAttribute("style", "font-size: " + fontSize.toString() + "%;");
+//    }
+//}
 
 function OverflowChangeStyle(idName) {
     let div = document.getElementById(idName);
@@ -196,12 +224,12 @@ function OverflowChangeStyle(idName) {
         console.log(div.offsetHeight - 50);
 //        div.style.overflow = "scroll";
     }
-    if (latex.offsetWidth > div.offsetWidth - 135) {
+    if (latex.offsetWidth > div.offsetWidth - 200) {
         div.style.justifyContent = "flex-start";
         console.log('2');
         console.log(idName);
         console.log(latex.offsetWidth);
-        console.log(div.offsetWidth - 135);
+        console.log(div.offsetWidth - 200);
 //        div.style.overflow = "scroll";
     }
     if (latex.offsetHeight <= div.offsetHeight - 50) {
@@ -212,12 +240,12 @@ function OverflowChangeStyle(idName) {
         console.log(div.offsetHeight - 50);
 //        div.style.overflow = "auto";
     }
-    if (latex.offsetWidth <= div.offsetWidth - 135) {
+    if (latex.offsetWidth <= div.offsetWidth - 200) {
         div.style.justifyContent = "center";
         console.log('4');
         console.log(idName);
         console.log(latex.offsetWidth);
-        console.log(div.offsetWidth - 135);
+        console.log(div.offsetWidth - 200);
 //        div.style.overflow = "auto";
     }
 

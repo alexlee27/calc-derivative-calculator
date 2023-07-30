@@ -21,11 +21,12 @@ def differentiate():
         expand_str = 'true'
     print(expand_bool)
     print(input_text)
-    input_simplified, differentiated, input_simplified_string, differentiated_string, steps_latex \
+    input_simplified, differentiated, input_simplified_string, differentiated_string, steps_latex, steps_explanation, steps_explanation_latex \
         = main.differentiate(input_text, expand=expand_bool)
     return jsonify({"input_simplified": input_simplified, "differentiated": differentiated,
                     "input_simplified_string": input_simplified_string, "differentiated_string": differentiated_string,
-                    "expand": expand_str, "steps_latex": steps_latex})
+                    "expand": expand_str, "steps_latex": steps_latex, "steps_explanation": steps_explanation,
+                    "steps_explanation_latex": steps_explanation_latex})
 
 # @app.route('/simplify', methods=['POST'])
 # def simplify():

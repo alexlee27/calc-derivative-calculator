@@ -176,11 +176,18 @@ input, button {
 #steps {
     display: flex;
     flex-direction: column;
-    padding: 0 18px;
     max-height: 0;
     width: 100%;
     overflow: auto;
     transition: max-height 0.2s ease-out;
+    background-color: #d8e8db;
+}
+
+#steps > * {
+    padding-left: 20px;
+    padding-right: 20px;
+    width: fit-content;
+    height: fit-content;
 }
 
 #show-steps > p {
@@ -202,4 +209,19 @@ input, button {
     height: 40px;
     margin-left: 20px;
     margin-right: 20px;
+}
+
+.explanation {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    font-size: 77%;
+}
+
+.explanation > * {
+    margin-right: 5px;
+}
+
+.explanation * {
+    color: #66786a;
 }
