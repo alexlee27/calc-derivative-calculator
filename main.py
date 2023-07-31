@@ -370,25 +370,25 @@ def get_log_custom_base(base: Expr, arg: Expr) -> Expr:
     """
     return Log(base, arg)
 
-def main() -> None:
-    """The main function of this file.
-    """
-    while True:
-        infix_expression = input('\nEnter a math expression to differentiate (type \'stop\' to stop): ')
-        if len(infix_expression) == 4 and infix_expression.lower() == 'stop':
-            break
-        variable = input('Enter the name of the variable to differentiate with respect to: ')
-        expr = string_to_expr(infix_expression, {variable})
-        if expr is not None:
-            differentiated = expr.differentiate(variable)
-            prev = differentiated
-            simplified = prev.simplify(expand=False)
-            while str(simplified) != str(prev):
-                print(prev)
-                prev, simplified = simplified, simplified.simplify(expand=False)
-            print(simplified)
-            visualization_runner(simplified)
-    print('Program is done')
+# def main() -> None:
+#     """The main function of this file.
+#     """
+#     while True:
+#         infix_expression = input('\nEnter a math expression to differentiate (type \'stop\' to stop): ')
+#         if len(infix_expression) == 4 and infix_expression.lower() == 'stop':
+#             break
+#         variable = input('Enter the name of the variable to differentiate with respect to: ')
+#         expr = string_to_expr(infix_expression, {variable})
+#         if expr is not None:
+#             differentiated = expr.differentiate(variable)
+#             prev = differentiated
+#             simplified = prev.simplify(expand=False)
+#             while str(simplified) != str(prev):
+#                 print(prev)
+#                 prev, simplified = simplified, simplified.simplify(expand=False)
+#             print(simplified)
+#             visualization_runner(simplified)
+#     print('Program is done')
 
 
 def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[str, str, str, str, list, list, list]:
@@ -476,78 +476,78 @@ def input_preview(input_text: str, variable: str = 'x') -> str:
 #         return '\\text{' + expr.msg + '}', ''
 
 
-def testing(input_text: str, exp: bool, variable: str = 'x') -> str:
-    expr = string_to_expr(input_text, {variable})
-    if expr is not None:
-        prev1 = None
-        curr = expr
-        while str(curr) != str(prev1):
-            prev1, curr = curr, curr.rearrange()
-            print('prev1: ' + str(prev1))
-            print('curr : ' + str(curr))
-
-            prev2 = None
-            while str(curr) != str(prev2):
-                # print(prev2)
-                prev2, curr = curr, curr.simplify(expand=exp)  # todo: toggle expand
-                print('prev2: ' + str(prev2))
-                print('curr : ' + str(curr))
-            # print(simplified)
-        # todo: toggle below for graph
-        # visualization_runner(curr)
-        print(curr.get_latex())
-    else:
-        return '\\text{Error has occurred!}'
-
-
-def tester() -> None:
-    """Tester function.
-    """
-    while True:
-        infix_expression = input('\nEnter a math expression to test (type \'stop\' to stop): ')
-        if len(infix_expression) == 4 and infix_expression.lower() == 'stop':
-            break
-        variable = input('Enter the name of the variable to differentiate with respect to: ')
-        expr = string_to_expr(infix_expression, {variable})
-        print(expr)
-        print(expr.get_latex())
-        if expr is not None:
-            prompt = input('\'s\' for simplifying, \'r\' for rearranging, \'t\' for trig simplifying')
-            while prompt.lower() in {'s', 'r', 't'}:
-                if prompt.lower() == 's':
-                    prev = expr
-                    simplified = prev.simplify(expand=False)
-                    print(prev)
-                    prev, simplified = simplified, simplified.simplify(expand=False)
-                    print(simplified)
-                    print(simplified.get_latex())
-                    # visualization_runner(simplified)
-                    expr = simplified
-                if prompt.lower() == 'r':
-                    # print('1')
-                    prev = expr
-                    rearranged = prev.rearrange()
-                    # while str(rearranged) != str(prev):
-                    #     print(prev)
-                    #     prev, rearranged = rearranged, rearranged.rearrange()
-                    # print('2')
-                    print(rearranged)
-                    visualization_runner(rearranged)
-                    expr = rearranged
-                if prompt.lower() == 't':
-                    print(expr)
-                    trig_simplified = expr.trig_simplify()
-                    print(trig_simplified)
-                    print(trig_simplified.get_latex())
-                    expr = trig_simplified
-
-                prompt = input('\'s\' for simplifying, \'r\' for rearranging')
-    print('Program is done')
-
-
-if __name__ == '__main__':
-    prompt = input('\'d\' to differentiate, \'t\' to test:')
-    if prompt == 'd':
-        main()
-    if prompt == 't':
-        tester()
+# def testing(input_text: str, exp: bool, variable: str = 'x') -> str:
+#     expr = string_to_expr(input_text, {variable})
+#     if expr is not None:
+#         prev1 = None
+#         curr = expr
+#         while str(curr) != str(prev1):
+#             prev1, curr = curr, curr.rearrange()
+#             print('prev1: ' + str(prev1))
+#             print('curr : ' + str(curr))
+#
+#             prev2 = None
+#             while str(curr) != str(prev2):
+#                 # print(prev2)
+#                 prev2, curr = curr, curr.simplify(expand=exp)  # todo: toggle expand
+#                 print('prev2: ' + str(prev2))
+#                 print('curr : ' + str(curr))
+#             # print(simplified)
+#         # todo: toggle below for graph
+#         # visualization_runner(curr)
+#         print(curr.get_latex())
+#     else:
+#         return '\\text{Error has occurred!}'
+#
+#
+# def tester() -> None:
+#     """Tester function.
+#     """
+#     while True:
+#         infix_expression = input('\nEnter a math expression to test (type \'stop\' to stop): ')
+#         if len(infix_expression) == 4 and infix_expression.lower() == 'stop':
+#             break
+#         variable = input('Enter the name of the variable to differentiate with respect to: ')
+#         expr = string_to_expr(infix_expression, {variable})
+#         print(expr)
+#         print(expr.get_latex())
+#         if expr is not None:
+#             prompt = input('\'s\' for simplifying, \'r\' for rearranging, \'t\' for trig simplifying')
+#             while prompt.lower() in {'s', 'r', 't'}:
+#                 if prompt.lower() == 's':
+#                     prev = expr
+#                     simplified = prev.simplify(expand=False)
+#                     print(prev)
+#                     prev, simplified = simplified, simplified.simplify(expand=False)
+#                     print(simplified)
+#                     print(simplified.get_latex())
+#                     # visualization_runner(simplified)
+#                     expr = simplified
+#                 if prompt.lower() == 'r':
+#                     # print('1')
+#                     prev = expr
+#                     rearranged = prev.rearrange()
+#                     # while str(rearranged) != str(prev):
+#                     #     print(prev)
+#                     #     prev, rearranged = rearranged, rearranged.rearrange()
+#                     # print('2')
+#                     print(rearranged)
+#                     visualization_runner(rearranged)
+#                     expr = rearranged
+#                 if prompt.lower() == 't':
+#                     print(expr)
+#                     trig_simplified = expr.trig_simplify()
+#                     print(trig_simplified)
+#                     print(trig_simplified.get_latex())
+#                     expr = trig_simplified
+#
+#                 prompt = input('\'s\' for simplifying, \'r\' for rearranging')
+#     print('Program is done')
+#
+#
+# if __name__ == '__main__':
+#     prompt = input('\'d\' to differentiate, \'t\' to test:')
+#     if prompt == 'd':
+#         main()
+#     if prompt == 't':
+#         tester()
