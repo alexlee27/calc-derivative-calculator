@@ -44,7 +44,7 @@ class Expr:
         """Get the LaTeX code for the expression."""
         raise NotImplementedError
 
-    def differentiate(self, respect_to: str) -> tuple:  # tuple[Expr, list]:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         """Differentiate the expression."""
         raise NotImplementedError
 
@@ -409,7 +409,7 @@ class Plus(BinOp):
 
         return self.left.get_latex() + '+ ' + self.right.get_latex()
 
-    def differentiate(self, respect_to: str) -> tuple:  # tuple[Expr, list]:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if not isinstance(self.left, Plus) and not isinstance(self.right, Plus):
             steps = [(Plus(Diff(self.left, respect_to), Diff(self.right, respect_to)), 'Differentiation is linear; differentiate each of the summands: ',
                       f'\\displaystyle\\left[u_1({respect_to})+u_2({respect_to})+\\cdots+u_n({respect_to})\\right]\'=u_1\'({respect_to})+u_2\'({respect_to})+\\cdots+u_n\'({respect_to})')]
@@ -681,7 +681,7 @@ class Multiply(BinOp):
                     return left_latex + ' ' + right_latex
         return left_latex + '\\cdot ' + right_latex
 
-    def differentiate(self, respect_to: str) -> tuple:  # tuple[Expr, list]:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         left_type = get_arrangement_type(self.left)[0]
         right_type = get_arrangement_type(self.right)[0]
         if respect_to != 'c':
@@ -1205,7 +1205,7 @@ class Multiply(BinOp):
         return Multiply(self.left.fractionify(), self.right.fractionify())
 
 
-def filter_neg_powers(expr: Expr) -> tuple:  # tuple[Expr, Optional[Expr]]:
+def filter_neg_powers(expr: Expr) -> tuple[Expr, Optional[Expr]]:
     """Return a tuple in the form (numerator, denominator), where numerator is the modified expr object with all
     Pows with negative exponents removed, and denominator is an Expr object consisting of terms that should be in the
     denominator.
@@ -1332,7 +1332,7 @@ def get_digit_tree(i: int, lst: list, digit_tree: Expr) -> Expr:
     return digit_tree
 
 
-def is_minus(expr: Expr) -> tuple:  # tuple[bool, Expr]:  # todo: test
+def is_minus(expr: Expr) -> tuple[bool, Expr]:  # todo: test
     """Returns a tuple in the form of (boolean, abs_value), where boolean is whether expr is negative, and
     abs_value is the absolute value of expr.
 
@@ -1369,7 +1369,7 @@ class Const(Num):
         else:
             return super().get_latex()
 
-    def differentiate(self, respect_to: str) -> tuple:  # tuple[Expr, list]:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if respect_to != 'c':
             constant_var = 'c'
         else:
@@ -1425,7 +1425,7 @@ class Pow(BinOp):
         right_latex = self.right.get_latex()
         return '{ ' + left_latex + '} ' + '^ { ' + right_latex + '} '
 
-    def differentiate(self, respect_to: str) -> tuple:  # tuple[Expr, list]:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if respect_to != 'c':
             constant_var = 'c'
         else:
@@ -1652,7 +1652,7 @@ class Var(Num):
     def __init__(self, name: str) -> None:
         super().__init__(name)
 
-    def differentiate(self, respect_to: str) -> tuple:  # tuple[Expr, list]:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if respect_to != 'c':
             constant_var = 'c'
         else:
@@ -1693,7 +1693,7 @@ class Trig(Func):
     def get_latex(self) -> str:
         return '\\' + self.name + ' \\left( ' + self.arg.get_latex() + '\\right) '
 
-    def differentiate(self, respect_to: str) -> tuple:  # tuple[Expr, list]:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if self.name == 'sin':
             steps = [(Multiply(Trig('cos', self.arg), Diff(self.arg, respect_to)), 'Apply the following trigonometric differentiation rule and the chain rule: ',
                       f'\\displaystyle \\left[\\sin(u({respect_to}))\\right]\'=\\cos(u({respect_to}))\\cdot u\'({respect_to})')]
@@ -1860,7 +1860,7 @@ class Log(Func):
         else:
             return '\\log_{' + self.base.get_latex() + '} \\left( ' + self.arg.get_latex() + '\\right) '
 
-    def differentiate(self, respect_to: str) -> tuple:  # tuple[Expr, list]:
+    def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if respect_to != 'c':
             constant_var = 'c'
         else:
@@ -1933,7 +1933,7 @@ class Log(Func):
         return Log(self.base.fractionify(), self.arg.fractionify())
 
 
-def process_to_list(obj: Expr) -> list:  # list[tuple[str, int | float | str]]:
+def process_to_list(obj: Expr) -> list[tuple[str, int | float | str]]:
     """For processing 'Non-digit' Expr objects. Outputs a list, with each element being a tuple in the form
     of (base, exponent)
 
