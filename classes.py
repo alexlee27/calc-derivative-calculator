@@ -1,6 +1,8 @@
 """Classes for mathematical expressions"""
 from __future__ import annotations
 from typing import *
+import os
+os.environ["PYTHON_VERSION"] = "3.11"
 
 
 # todo: run a bunch of test cases for Plus.simplify, Plus.rearrange, Multiply.simplify, and Multiply.rearrange
