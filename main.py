@@ -49,7 +49,7 @@ class DecimalError(CustomError):
     msg = 'Please enter decimals as fractions.'
 
 
-def tokenizer(text: str):  # -> list[str]
+def tokenizer(text: str) -> list:
     """Converts a string math input into a list of tokens that can be processed by the parser function."""
     names_2_char = {'ln', 'pi'}
     names_3_char = {'sin', 'cos', 'tan', 'csc', 'sec', 'cot', 'log'}
@@ -154,7 +154,7 @@ def tokenizer(text: str):  # -> list[str]
     return result
 
 
-def string_to_expr(text: str, variables: set[str]) -> Expr | CustomError:
+def string_to_expr(text: str, variables: set) -> Expr | CustomError:
     """A parser function that converts a string math input to an Expr binary tree.
     Returns the Exception object if there is an error.
 
@@ -316,7 +316,7 @@ def is_left_associative(operator: str) -> bool:
     return operator != '^'
 
 
-def str_to_num(token: str, variables: set[str]) -> Num:
+def str_to_num(token: str, variables: set) -> Num:
     """Converts a string token into a Num object.
 
     Preconditions:
@@ -353,7 +353,7 @@ def str_to_bin_op(token: str, left: Expr, right: Expr) -> BinOp:
         return Plus(left, Multiply(Const(-1), right))
 
 
-def str_to_func(token: str, arg: Expr, variables: set[str]) -> Func:
+def str_to_func(token: str, arg: Expr) -> Func:
     """Converts a string token into a Num object.
 
     Preconditions:
@@ -391,7 +391,7 @@ def get_log_custom_base(base: Expr, arg: Expr) -> Expr:
 #     print('Program is done')
 
 
-def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[str, str, str, str, list, list, list]:
+def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple:  # tuple[str, str, str, str, list, list, list]
     """Differentiates the mathematical expression represented by input_text,
     returns a tuple in the form (input_simplfied_latex, differentiated_latex, input_simplified_string,
      differentiated_string, expand, steps_latex)
