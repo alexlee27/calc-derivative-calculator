@@ -18,6 +18,46 @@
     </div>
     <div id="main-content">
         <div id="left-column">
+            <div id="options-box">
+                <h3 id="options-title">Options</h3>
+                <table>
+                    <tr>
+                        <th><label for="variable-of-diff">Differentiation var.</label></th>
+                        <th>
+                            <select id="variable-of-diff">
+                                <option value="x">x</option>
+                                <option value="a">a</option>
+                                <option value="b">b</option>
+                                <option value="c">c</option>
+                                <option value="d">d</option>
+                                <option value="f">f</option>
+                                <option value="g">g</option>
+                                <option value="h">h</option>
+                                <option value="j">j</option>
+                                <option value="k">k</option>
+                                <option value="l">l</option>
+                                <option value="m">m</option>
+                                <option value="n">n</option>
+                                <option value="o">o</option>
+                                <option value="p">p</option>
+                                <option value="q">q</option>
+                                <option value="r">r</option>
+                                <option value="s">s</option>
+                                <option value="t">t</option>
+                                <option value="u">u</option>
+                                <option value="v">v</option>
+                                <option value="w">w</option>
+                                <option value="y">y</option>
+                                <option value="z">z</option>
+                            </select>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th><label for="expand" id="expand-text">Expand?</label></th>
+                        <th><input type="checkbox" id="expand" name="expand" value="false" onclick="toggleExpandCheckbox()"></th>
+                    </tr>
+                </table>
+            </div>
 
         </div>
 
@@ -30,8 +70,6 @@
 
                 <form id="differentiate">
                     <input type="text" placeholder="Enter an expression to differentiate..." id="input-text" name="input_text">
-                    <input type="checkbox" id="expand" name="expand" value="false" onclick="toggleExpandCheckbox()">
-                    <label for="expand" id="expand-text">Expand?</label>
                     <input type="submit" id="submit-button" value="Differentiate!">
                 </form>
 
@@ -52,12 +90,12 @@
             </div>
 
             <h2>Differentiated expression</h2>
+            <p class="scroll-message">If the entire expression doesn't appear, try scrolling</p>
             <button type="button" id="show-steps">Steps <p id="show-steps-icon">+</p></button>
             <div id="steps">
             </div>
 
             <div id="lower-section">
-                <p class="scroll-message">If the entire expression doesn't appear, try scrolling</p>
                 <h3>Rearranged and simplified:</h3>
                 <div id="differentiated-result" class="latex-box"></div>
             </div>

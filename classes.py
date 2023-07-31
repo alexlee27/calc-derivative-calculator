@@ -692,7 +692,7 @@ class Multiply(BinOp):
             return Const(0), [(Const(0), 'The derivative of a constant is zero: ',
                               f'\\displaystyle {constant_var}\'=0')]
 
-        if isinstance(self.left, Const) and not isinstance(self.right, Const):
+        if left_type in {'Non-digit', 'Digit'} and not isinstance(self.right, Const):
             steps = [(Multiply(self.left, Diff(self.right, respect_to)), 'Differentiation is linear; pull out constant factors: ',
                       f'\\displaystyle\\left[{constant_var}\\cdot u({respect_to})\\right]\'={constant_var}\\cdot u\'({respect_to})')]
             right_differentiated, right_steps = self.right.differentiate(respect_to)
@@ -700,7 +700,7 @@ class Multiply(BinOp):
                 steps.append((Multiply(self.left, item[0]), item[1], item[2]))
             return Multiply(self.left, right_differentiated), steps
 
-        if isinstance(self.right, Const) and not isinstance(self.left, Const):
+        if right_type in {'Non-digit', 'Digit'} and not isinstance(self.left, Const):
             steps = [(Multiply(self.right, Diff(self.left, respect_to)), 'Differentiation is linear; pull out constant factors: ',
                       f'\\displaystyle\\left[a\\{constant_var}dot u({respect_to})\\right]\'={constant_var}\\cdot u\'({respect_to})')]
             left_differentiated, left_steps = self.left.differentiate(respect_to)

@@ -1,33 +1,3 @@
-let coll = document.getElementById("show-steps");
-let content = document.getElementById("steps");
-let icon = document.getElementById("show-steps-icon");
-coll.addEventListener("click", function() {
-//    this.classList.toggle("active");
-    if (content.style.maxHeight){
-      content.style.maxHeight = null;
-      content.style.paddingTop = 0;
-      content.style.paddingBottom = 0;
-    } else {
-      content.style.maxHeight = content.scrollHeight + "px";
-    }
-
-    if (icon.textContent === "+") {
-        icon.textContent = "−"; // U+2212; not a hyphen
-    }
-    else {
-        icon.textContent = "+";
-    }
-});
-
-let clearSteps = document.getElementById("clear-steps");
-clearSteps.addEventListener("click", function() {
-    while (content.firstChild) {
-        content.removeChild(content.lastChild);
-    }
-    content.style.maxHeight = null;
-    icon.textContent = "+";
-});
-
 // All jQuery code goes below
 // $ is shortcut for 'jQuery'
 $(document).ready(function () {
@@ -37,11 +7,13 @@ $(document).ready(function () {
 
         const input = $("#input-text").val();
         const expandBool = $("#expand").val();
+        const varOfDiff = $("#variable-of-diff").find(":selected").val();
+        console.log(varOfDiff);
 
         $.ajax({
             type: "POST",
             url: "/differentiate",
-            data: { input_text: input, expand: expandBool },
+            data: { input_text: input, expand: expandBool, var_of_diff: varOfDiff },
             dataType: "json",
             success: function (response) {
                 // Update page with result
@@ -95,36 +67,9 @@ $(document).ready(function () {
         });
     });
 
-    $("#input-text").on('input', function() {
-        const input = $("#input-text").val();
-        const $steps = $("#steps");
+    $("#input-text").on('input', inputPreview);
 
-        $steps.empty();
-        icon.textContent = "+";
-
-        $.ajax({
-            type: "POST",
-            url: "/input_preview",
-            data: { input_text: input },
-            dataType: "json",
-            success: function (response) {
-                // Update page with result
-                let result = response.preview_result;
-                result = "$$" + result + "$$";
-
-                const $inputPreview = $("#input-preview");
-
-                $inputPreview.html(result);
-
-                MathJax.typesetPromise();
-                changeLaTeXStyle("input-preview", 180);
-                OverflowChangeStyle("input-preview");
-            },
-            error: function (xhr, status, error) {
-                console.log(error);
-            }
-        });
-    });
+    $("#variable-of-diff").on('change', inputPreview);
 
     $("#simplify").submit(function (event) {
         // Preventing submitting form by default
@@ -132,11 +77,13 @@ $(document).ready(function () {
 
         const simplifyOriginal = $("#simplify-original").val();
         const simplifyExpand = $("#simplify-expand").val();
+        const varOfDiff = $("#variable-of-diff").find(":selected").val();
+        console.log(varOfDiff);
 
         $.ajax({
             type: "POST",
             url: "/differentiate",
-            data: { input_text: simplifyOriginal, expand: simplifyExpand },
+            data: { input_text: simplifyOriginal, expand: simplifyExpand, var_of_diff: varOfDiff },
             dataType: "json",
             success: function (response) {
                 // Update page with result
@@ -190,6 +137,68 @@ $(document).ready(function () {
         });
     });
 })
+
+function inputPreview() {
+    const input = $("#input-text").val();
+    const $steps = $("#steps");
+    const varOfDiff = $("#variable-of-diff").find(":selected").val();
+
+    $steps.empty();
+    icon.textContent = "+";
+
+    $.ajax({
+        type: "POST",
+        url: "/input_preview",
+        data: { input_text: input, var_of_diff: varOfDiff },
+        dataType: "json",
+        success: function (response) {
+            // Update page with result
+            let result = response.preview_result;
+            result = "$$" + result + "$$";
+
+            const $inputPreview = $("#input-preview");
+
+            $inputPreview.html(result);
+
+            MathJax.typesetPromise();
+            changeLaTeXStyle("input-preview", 180);
+            OverflowChangeStyle("input-preview");
+        },
+        error: function (xhr, status, error) {
+            console.log(error);
+        }
+    });
+}
+
+let coll = document.getElementById("show-steps");
+let content = document.getElementById("steps");
+let icon = document.getElementById("show-steps-icon");
+coll.addEventListener("click", function() {
+//    this.classList.toggle("active");
+    if (content.style.maxHeight){
+      content.style.maxHeight = null;
+      content.style.paddingTop = 0;
+      content.style.paddingBottom = 0;
+    } else {
+      content.style.maxHeight = content.scrollHeight + "px";
+    }
+
+    if (icon.textContent === "+") {
+        icon.textContent = "−"; // U+2212; not a hyphen
+    }
+    else {
+        icon.textContent = "+";
+    }
+});
+
+let clearSteps = document.getElementById("clear-steps");
+clearSteps.addEventListener("click", function() {
+    while (content.firstChild) {
+        content.removeChild(content.lastChild);
+    }
+    content.style.maxHeight = null;
+    icon.textContent = "+";
+});
 
 
 function toggleExpandCheckbox() {

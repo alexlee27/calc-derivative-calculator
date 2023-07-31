@@ -12,6 +12,7 @@ def index():
 def differentiate():
     input_text = request.form['input_text']
     expand_str = request.form['expand']
+    var_of_diff = request.form['var_of_diff']
     print(expand_str)
     if expand_str == 'true':
         expand_bool = True
@@ -22,7 +23,7 @@ def differentiate():
     print(expand_bool)
     print(input_text)
     input_simplified, differentiated, input_simplified_string, differentiated_string, steps_latex, steps_explanation, steps_explanation_latex \
-        = main.differentiate(input_text, expand=expand_bool)
+        = main.differentiate(input_text, expand=expand_bool, variable=var_of_diff)
     return jsonify({"input_simplified": input_simplified, "differentiated": differentiated,
                     "input_simplified_string": input_simplified_string, "differentiated_string": differentiated_string,
                     "expand": expand_str, "steps_latex": steps_latex, "steps_explanation": steps_explanation,
@@ -50,7 +51,8 @@ def differentiate():
 @app.route('/input_preview', methods=['POST'])
 def input_preview():
     input_text = request.form['input_text']
-    result = main.input_preview(input_text)
+    var_of_diff = request.form['var_of_diff']
+    result = main.input_preview(input_text, variable=var_of_diff)
     return jsonify({"preview_result": result})
 
 

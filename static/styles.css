@@ -25,6 +25,11 @@ p {
     color: #1e3323;
 }
 
+select {
+    font-family: 'Karla', sans-serif;
+    font-size: 18px;
+}
+
 body {
     display: flex;
     flex-direction: column;
@@ -114,23 +119,36 @@ body {
     margin-bottom: 20px;
 }
 
+#input-text {
+    margin-right: 10px;
+}
+
+#submit-button {
+    margin-left: 10px;
+}
+
+#options-box > table {
+    width: 100%;
+}
+
+#options-box > table * {
+    font-weight: 400;
+}
+
 input, button {
     font-family: 'Karla', sans-serif;
     font-size: 18px;
     border: 0;
 }
 
-#expand {
-    width: auto;
-}
-
 #input-text {
-    width: 68%;
+    width: 70%;
     height: 100%;
     border-radius: 20px;
     box-sizing: border-box;
     padding-left: 30px;
     padding-right: 30px;
+    flex-grow: 1;
 }
 
 #submit-button, #simplify-submit, #clear-steps {
@@ -234,4 +252,27 @@ input, button {
 
 .explanation * {
     color: #66786a;
+}
+
+#left-column, #right-column {
+    display: flex;
+    justify-content: center;
+    padding-left: 20px;
+    padding-right: 20px;
+
+}
+
+#options-box {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #bfdbc5;
+    padding: 20px;
+    width: 100%;
+    height: 100px;
+}
+
+#options-title {
+    font-size: 23px;
 }
