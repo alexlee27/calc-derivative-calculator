@@ -49,7 +49,7 @@ class DecimalError(CustomError):
     msg = 'Please enter decimals as fractions.'
 
 
-def tokenizer(text: str) -> list[str]:
+def tokenizer(text: str):  # -> list[str]
     """Converts a string math input into a list of tokens that can be processed by the parser function."""
     names_2_char = {'ln', 'pi'}
     names_3_char = {'sin', 'cos', 'tan', 'csc', 'sec', 'cot', 'log'}
