@@ -5,6 +5,8 @@ coll.addEventListener("click", function() {
 //    this.classList.toggle("active");
     if (content.style.maxHeight){
       content.style.maxHeight = null;
+      content.style.paddingTop = 0;
+      content.style.paddingBottom = 0;
     } else {
       content.style.maxHeight = content.scrollHeight + "px";
     }

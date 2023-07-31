@@ -41,6 +41,12 @@ body {
     align-items: center;
     justify-content: center;
     height: 150px;
+
+}
+
+#menu > a {
+    position: absolute;
+    right: 50px;
 }
 
 #main-content {
@@ -181,6 +187,8 @@ input, button {
     overflow: auto;
     transition: max-height 0.2s ease-out;
     background-color: #d8e8db;
+    box-sizing: border-box;
+
 }
 
 #steps > * {
@@ -216,6 +224,8 @@ input, button {
     flex-direction: row;
     align-items: center;
     font-size: 77%;
+    flex-wrap: wrap;
+    padding-top: 15px;
 }
 
 .explanation > * {

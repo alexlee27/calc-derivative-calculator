@@ -1199,10 +1199,10 @@ class Multiply(BinOp):
         numerator, denominator = filter_neg_powers(self)
         if denominator:
             if isinstance(denominator, Const) and denominator.name == 1:
-                return numerator
+                return numerator.fractionify()
             else:
-                return Multiply(numerator, Pow(denominator, Const(-1)))
-        return numerator
+                return Multiply(numerator.fractionify(), Pow(denominator.fractionify(), Const(-1)))
+        return Multiply(self.left.fractionify(), self.right.fractionify())
 
 
 def filter_neg_powers(expr: Expr) -> tuple[Expr, Optional[Expr]]:
