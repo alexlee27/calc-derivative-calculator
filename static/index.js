@@ -1,6 +1,8 @@
 // All jQuery code goes below
 // $ is shortcut for 'jQuery'
 $(document).ready(function () {
+    const loader = $("#loader");
+    loader.hide();
     $("#differentiate").submit(function (event) {
         // Preventing submitting form by default
         event.preventDefault();
@@ -8,6 +10,7 @@ $(document).ready(function () {
         const input = $("#input-text").val();
         const expandBool = $("#expand").val();
         const varOfDiff = $("#variable-of-diff").find(":selected").val();
+        loader.show();
         console.log(varOfDiff);
 
         $.ajax({
@@ -51,6 +54,7 @@ $(document).ready(function () {
                     $steps.append(explanation);
                     $steps.append(step);
                 }
+                loader.hide();
 
                 content.style.maxHeight = null;
                 icon.textContent = "+";
@@ -78,6 +82,7 @@ $(document).ready(function () {
         const simplifyOriginal = $("#simplify-original").val();
         const simplifyExpand = $("#simplify-expand").val();
         const varOfDiff = $("#variable-of-diff").find(":selected").val();
+        loader.show();
         console.log(varOfDiff);
 
         $.ajax({
@@ -121,6 +126,7 @@ $(document).ready(function () {
                     $steps.append(explanation);
                     $steps.append(step);
                 }
+                loader.hide();
 
                 content.style.maxHeight = null;
                 icon.textContent = "+";
