@@ -1,16 +1,25 @@
 // All jQuery code goes below
 // $ is shortcut for 'jQuery'
 $(document).ready(function () {
-    const loader = $("#loader");
-    loader.hide();
+
     $("#differentiate").submit(function (event) {
         // Preventing submitting form by default
         event.preventDefault();
 
+        const $inputSimplified = $("#input-simplified");
+        const $differentiatedResult = $("#differentiated-result");
+
         const input = $("#input-text").val();
         const expandBool = $("#expand").val();
         const varOfDiff = $("#variable-of-diff").find(":selected").val();
-        loader.show();
+
+        $inputSimplified.empty();
+        $differentiatedResult.empty();
+        $inputSimplified.append("<div class=\"loader\" id=\"loader1\"></div>");
+        $differentiatedResult.append("<div class=\"loader\" id=\"loader2\"></div>");
+        OverflowChangeStyle("input-simplified");
+        OverflowChangeStyle("differentiated-result");
+
         console.log(varOfDiff);
 
         $.ajax({
@@ -32,16 +41,16 @@ $(document).ready(function () {
                 input_simplified = "$$" + input_simplified + "$$";
                 differentiated = "$$" + differentiated + "$$";
 
-                const $inputSimplified = $("#input-simplified");
-                const $differentiatedResult = $("#differentiated-result");
                 const $simplifyOriginal = $("#simplify-original");
                 const $simplifyDifferentiated = $("#simplify-differentiated");
                 const $simplifyExpand = $("#simplify-expand");
                 const $steps = $("#steps");
 
+                $inputSimplified.empty();
+                $differentiatedResult.empty();
+                $inputSimplified.append(input_simplified);
+                $differentiatedResult.append(differentiated);
 
-                $inputSimplified.html(input_simplified);
-                $differentiatedResult.html(differentiated);
                 $simplifyOriginal.val(input_simplified_string);
                 $simplifyDifferentiated.val(differentiated_string);
                 $simplifyExpand.val(expand);
@@ -54,7 +63,6 @@ $(document).ready(function () {
                     $steps.append(explanation);
                     $steps.append(step);
                 }
-                loader.hide();
 
                 content.style.maxHeight = null;
                 icon.textContent = "+";
@@ -79,10 +87,20 @@ $(document).ready(function () {
         // Preventing submitting form by default
         event.preventDefault();
 
+        const $inputSimplified = $("#input-simplified");
+        const $differentiatedResult = $("#differentiated-result");
+
         const simplifyOriginal = $("#simplify-original").val();
         const simplifyExpand = $("#simplify-expand").val();
         const varOfDiff = $("#variable-of-diff").find(":selected").val();
-        loader.show();
+
+        $inputSimplified.empty();
+        $differentiatedResult.empty();
+        $inputSimplified.append("<div class=\"loader\" id=\"loader1\"></div>");
+        $differentiatedResult.append("<div class=\"loader\" id=\"loader2\"></div>");
+        OverflowChangeStyle("input-simplified");
+        OverflowChangeStyle("differentiated-result");
+
         console.log(varOfDiff);
 
         $.ajax({
@@ -104,16 +122,16 @@ $(document).ready(function () {
                 input_simplified = "$$" + input_simplified + "$$";
                 differentiated = "$$" + differentiated + "$$";
 
-                const $inputSimplified = $("#input-simplified");
-                const $differentiatedResult = $("#differentiated-result");
                 const $simplifyOriginal = $("#simplify-original");
                 const $simplifyDifferentiated = $("#simplify-differentiated");
                 const $simplifyExpand = $("#simplify-expand");
                 const $steps = $("#steps");
 
+                $inputSimplified.empty();
+                $differentiatedResult.empty();
+                $inputSimplified.append(input_simplified);
+                $differentiatedResult.append(differentiated);
 
-                $inputSimplified.html(input_simplified);
-                $differentiatedResult.html(differentiated);
                 $simplifyOriginal.val(input_simplified_string);
                 $simplifyDifferentiated.val(differentiated_string);
                 $simplifyExpand.val(expand);
@@ -126,7 +144,6 @@ $(document).ready(function () {
                     $steps.append(explanation);
                     $steps.append(step);
                 }
-                loader.hide();
 
                 content.style.maxHeight = null;
                 icon.textContent = "+";
@@ -232,36 +249,36 @@ function changeLaTeXStyle(idName, fontSize) {
 function OverflowChangeStyle(idName) {
     let div = document.getElementById(idName);
     let styles = getComputedStyle(div);
-    let latex = div.getElementsByClassName("MathJax CtxtMenu_Attached_0")[0];
-    if (latex.offsetHeight > div.offsetHeight - 50) {
+    let content = div.firstChild;
+    if (content.offsetHeight > div.offsetHeight - 50) {
         div.style.alignItems = "flex-start";
         console.log('1');
         console.log(idName);
-        console.log(latex.offsetHeight);
+        console.log(content.offsetHeight);
         console.log(div.offsetHeight - 50);
 //        div.style.overflow = "scroll";
     }
-    if (latex.offsetWidth > div.offsetWidth - 200) {
+    if (content.offsetWidth > div.offsetWidth - 200) {
         div.style.justifyContent = "flex-start";
         console.log('2');
         console.log(idName);
-        console.log(latex.offsetWidth);
+        console.log(content.offsetWidth);
         console.log(div.offsetWidth - 200);
 //        div.style.overflow = "scroll";
     }
-    if (latex.offsetHeight <= div.offsetHeight - 50) {
+    if (content.offsetHeight <= div.offsetHeight - 50) {
         div.style.alignItems = "center";
         console.log('3');
         console.log(idName);
-        console.log(latex.offsetHeight);
+        console.log(content.offsetHeight);
         console.log(div.offsetHeight - 50);
 //        div.style.overflow = "auto";
     }
-    if (latex.offsetWidth <= div.offsetWidth - 200) {
+    if (content.offsetWidth <= div.offsetWidth - 200) {
         div.style.justifyContent = "center";
         console.log('4');
         console.log(idName);
-        console.log(latex.offsetWidth);
+        console.log(content.offsetWidth);
         console.log(div.offsetWidth - 200);
 //        div.style.overflow = "auto";
     }

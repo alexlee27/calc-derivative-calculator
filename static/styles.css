@@ -63,7 +63,7 @@ footer {
 
 #main-content {
     display: flex;
-    background-color: #bfdbc5;
+    background-color: #a9ccb1;
     flex-direction: row;
     width: 100%;
     margin: 0px;
@@ -78,6 +78,8 @@ footer {
     overflow: hidden;
     padding: 0;
     margin: 0;
+    background-color: #bfdbc5;
+    border-radius: 20px;
 }
 
 #main-content > div {
@@ -285,7 +287,7 @@ input, button {
     font-size: 23px;
 }
 
-#loader {
+.loader {
   border: 10px solid #ebf5ed;
   border-top: 10px solid #a9ccb1;
   border-radius: 50%;
