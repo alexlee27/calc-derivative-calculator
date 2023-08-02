@@ -98,6 +98,10 @@ def tokenizer(text: str) -> list[str]:
                 result.append(text[i])
                 prev_type = 'operator'
             elif text[i] == '-':
+                j = i
+                while j + 1 < len(text) and text[j + 1] == ' ':
+                    j += 1
+                i = j
                 if not (i + 1 < len(text) and ord('0') <= ord(text[i + 1]) <= ord('9')):
                     if prev_type in {None, '('}:
                         result.append('-1')
