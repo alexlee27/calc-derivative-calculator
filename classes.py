@@ -677,9 +677,20 @@ class Multiply(BinOp):
                 if self.left.name == -1:
 
                     return '- ' + right_latex
-                else:
-                    return left_latex + ' ' + right_latex
-        return left_latex + '\\cdot ' + right_latex
+                # else:
+                #     return left_latex + ' ' + right_latex
+
+        # digit * digit
+        if isinstance(self.right, Const) and (isinstance(self.right.name, int) or isinstance(self.right.name, float)):
+            return left_latex + '\\cdot ' + right_latex
+
+        # digit * (digit * something) (note: won't appear naturally)
+        if isinstance(self.right, Multiply):
+            if isinstance(self.right.left, Const) and (
+                    isinstance(self.right.left.name, int) or isinstance(self.right.left.name, float)):
+                return left_latex + '\\cdot ' + right_latex
+
+        return left_latex + ' ' + right_latex
 
     def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         left_type = get_arrangement_type(self.left)[0]
@@ -1410,6 +1421,20 @@ class Pow(BinOp):
     def get_latex(self) -> str:
         # if isinstance(self.right, Const) and self.right.name == -1:
         #     return '\\frac{1}{ ' + self.left.get_latex() + '} '
+
+        # something ^ (1/n)
+        if isinstance(self.right, Multiply):
+            if isinstance(self.right.left, Const) and self.right.left.name == 1 and \
+                    isinstance(self.right.right, Pow) and isinstance(self.right.right.left, Const) and \
+                    isinstance(self.right.right.left.name, int) and \
+                    isinstance(self.right.right.right, Const) and self.right.right.right.name == -1:
+                n = self.right.right.left.name
+                if n != 1:
+                    if n == 2:
+                        return '\\sqrt{' + self.left.get_latex() + '}'
+                    else:
+                        return '\\sqrt[' + str(n) + ']{' + self.left.get_latex() + '}'
+
         if isinstance(self.left, Trig):
             return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
         if isinstance(self.left, Log):

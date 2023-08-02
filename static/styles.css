@@ -74,10 +74,11 @@ footer {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    width: 60%;
+    width: 67%;
     overflow: hidden;
     padding: 0;
     margin: 0;
+    margin-right: 20px;
     background-color: #bfdbc5;
     border-radius: 20px;
 }
@@ -86,9 +87,15 @@ footer {
     /*border: 5px solid black;*/
 }
 
-#left-column, #right-column {
-    width: 20%;
+#left-column {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    width: 33%;
     background-color: #a9ccb1;
+    padding-left: 20px;
+    padding-right: 20px;
 }
 
 #upper-section, #lower-section {
@@ -263,15 +270,7 @@ input, button {
     color: #66786a;
 }
 
-#left-column, #right-column {
-    display: flex;
-    justify-content: center;
-    padding-left: 20px;
-    padding-right: 20px;
-
-}
-
-#options-box {
+#options-box, #instructions {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -279,11 +278,19 @@ input, button {
     background-color: #bfdbc5;
     padding: 20px;
     width: 100%;
-    height: 100px;
     border-radius: 20px;
+    box-sizing: border-box;
+    margin-bottom: 20px;
 }
 
-#options-title {
+#options-box {
+    height: 150px;
+}
+
+#instructions{
+}
+
+.left-boxes-title {
     font-size: 23px;
 }
 

@@ -19,10 +19,10 @@
     <div id="main-content">
         <div id="left-column">
             <div id="options-box">
-                <h3 id="options-title">Options</h3>
+                <h3 class="left-boxes-title">Options</h3>
                 <table>
                     <tr>
-                        <th><label for="variable-of-diff">Differentiation var.</label></th>
+                        <th><label for="variable-of-diff">Differentiation variable</label></th>
                         <th>
                             <select id="variable-of-diff">
                                 <option value="x">x</option>
@@ -59,6 +59,23 @@
                 </table>
             </div>
 
+            <div id="instructions">
+                <h3 class="left-boxes-title">Instructions</h3>
+                <ul>
+                    <li>Use <b>+</b>, <b>-</b>, <b>*</b>, and <b>/</b> for elementary arithmetic</li>
+                    <li>Use <b>^</b> for exponentiation</li>
+                    <li>Type <b><i>name</i>(<i>argument</i>)</b> for functions</li>
+                    <ul>
+                        <li>sin, cos, tan</li>
+                        <li>csc, sec, cot</li>
+                        <li>arcsin, arccos, arctan</li>
+                        <li>ln (natural logarithm)</li>
+                    </ul>
+                    <li>Type <b>log_(<i>base</i>)(<i>argument</i>)</b> for logarithms with custom bases</li>
+                    <li>Use parentheses to clarify what you mean</li>
+
+                </ul>
+            </div>
         </div>
 
         <div id="middle-column">
@@ -105,9 +122,9 @@
             </div>
         </div>
 
-        <div id="right-column">
+<!--        <div id="right-column">-->
 
-        </div>
+<!--        </div>-->
     </div>
     <script src="../static/index.js"></script>
     <footer>
