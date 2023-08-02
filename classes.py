@@ -26,7 +26,15 @@ from typing import *
 # debugged simplification/trig simplification for sin(x)+cos(x)+tan(x)+cot(x)+csc(x)+sec(x)
 # implemented differentiation for powers with fraction exponents
 # implemented arrangement order for a/b
-# todo: arccsc, arcsec, arccot
+# implemented arccsc, arcsec, arccot
+# todo: forbid spaces between digits in main tokenizer
+# todo: debug 0^(1-1)
+# todo: debug "x- x"
+# todo: debug "1 - - --" appearing as 1-(-)
+# todo: raise error when log base is 0, 1, -1
+# todo: >=2 digits in base of log_(base)(arg)
+# todo: csc(x) / (1 / sin(x)) differentiated result no simplification to cot
+# todo: log_(3)(1), log_(2)(234/99) bug
 
 
 class Expr:
@@ -1903,7 +1911,7 @@ class Log(Func):
 
     def __init__(self, base: Expr, arg: Expr) -> None:
         try:
-            if isinstance(arg, Const) and (arg.name == 0 or arg.name == 1):
+            if isinstance(base, Const) and (base.name == 0 or base.name == 1):
                 raise LogBaseError
             self.base = base
             super().__init__(arg)
