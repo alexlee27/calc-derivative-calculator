@@ -258,12 +258,12 @@ function OverflowChangeStyle(idName) {
         console.log(div.offsetHeight - 50);
 //        div.style.overflow = "scroll";
     }
-    if (content.offsetWidth > div.offsetWidth - 200) {
+    if (content.offsetWidth > div.offsetWidth - 190) {
         div.style.justifyContent = "flex-start";
         console.log('2');
         console.log(idName);
         console.log(content.offsetWidth);
-        console.log(div.offsetWidth - 200);
+        console.log(div.offsetWidth - 190);
 //        div.style.overflow = "scroll";
     }
     if (content.offsetHeight <= div.offsetHeight - 50) {
@@ -274,12 +274,12 @@ function OverflowChangeStyle(idName) {
         console.log(div.offsetHeight - 50);
 //        div.style.overflow = "auto";
     }
-    if (content.offsetWidth <= div.offsetWidth - 200) {
+    if (content.offsetWidth <= div.offsetWidth - 190) {
         div.style.justifyContent = "center";
         console.log('4');
         console.log(idName);
         console.log(content.offsetWidth);
-        console.log(div.offsetWidth - 200);
+        console.log(div.offsetWidth - 190);
 //        div.style.overflow = "auto";
     }
 

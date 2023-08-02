@@ -74,7 +74,7 @@ footer {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    width: 67%;
+    width: 66%;
     overflow: hidden;
     padding: 0;
     margin: 0;
@@ -92,7 +92,7 @@ footer {
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-    width: 33%;
+    width: 34%;
     background-color: #a9ccb1;
     padding-left: 20px;
     padding-right: 20px;

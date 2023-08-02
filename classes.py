@@ -62,7 +62,7 @@ class Expr:
         """Simplify any trigonometric functions."""
         return self
 
-    def fractionify(self) -> Expr:
+    def fractionify(self, expand: bool) -> Expr:
         """Put any terms with negative exponents in the denominators of fractions."""
         return self
 
@@ -405,7 +405,9 @@ class Plus(BinOp):
         if isinstance(self.right, Multiply) and isinstance(self.right.left, Const) \
                 and (isinstance(self.right.left.name, int) or isinstance(self.right.left.name, float)) \
                 and self.right.left.name < 0:
-            return self.left.get_latex() + ' ' + self.right.get_latex()
+            right_latex = self.right.get_latex()
+            if right_latex[:5] != '\\frac':
+                return self.left.get_latex() + ' ' + right_latex
 
         return self.left.get_latex() + '+ ' + self.right.get_latex()
 
@@ -592,6 +594,8 @@ class Plus(BinOp):
                 else:
                     return Plus(self.left.simplify(expand), r_simplified)
 
+
+
         # # Multiply + Expr or Expr + Multiply
         # if isinstance(self.left, Multiply) or isinstance(self.right, Multiply):
         #     result = Plus(self.left.simplify(expand), self.right.simplify(expand)).simplify(expand)
@@ -628,8 +632,8 @@ class Plus(BinOp):
     def trig_simplify(self) -> Expr:
         return Plus(self.left.trig_simplify(), self.right.trig_simplify())
 
-    def fractionify(self) -> Expr:
-        return Plus(self.left.fractionify(), self.right.fractionify())
+    def fractionify(self, expand: bool) -> Expr:
+        return Plus(self.left.fractionify(expand), self.right.fractionify(expand))
 
 
 def expr_to_list(obj: Expr, root: BinOp) -> list:
@@ -659,10 +663,9 @@ class Multiply(BinOp):
         return '( ' + str(self.left) + '* ' + str(self.right) + ') '
 
     def get_latex(self) -> str:
-        if isinstance(self.left, Plus):
+        left_latex = self.left.get_latex()
+        if isinstance(self.left, Plus) or left_latex[:5] == '\\sqrt':
             left_latex = '\\left( ' + self.left.get_latex() + '\\right) '
-        else:
-            left_latex = self.left.get_latex()
         if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
             return '\\frac{ ' + left_latex + '}{ ' + self.right.left.get_latex() + '} '
 
@@ -750,18 +753,19 @@ class Multiply(BinOp):
 
     def simplify(self, expand: bool) -> Expr:
         # Preventing simplification of 1 * (something ^ -1) into (something ^ -1)
-        # if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
-        #     if isinstance(self.left, Const) and self.left.name == 1:
-        #         return Multiply(Const(1), Pow(self.right.left.simplify(expand), Const(-1)))
+        if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
+            if isinstance(self.left, Const) and self.left.name == 1:
+                return Multiply(Const(1), Pow(self.right.left.simplify(expand), Const(-1)))
+
         if expand:
             if isinstance(self.left, Plus):
                 right_simplified = self.right.simplify(expand)
-                return Plus(Multiply(right_simplified, self.left.left.simplify(expand)),
-                            Multiply(right_simplified, self.left.right.simplify(expand))).simplify(expand)
+                return Plus(Multiply(right_simplified, self.left.left.simplify(expand)).simplify(expand),
+                            Multiply(right_simplified, self.left.right.simplify(expand)).simplify(expand)).simplify(expand)
             if isinstance(self.right, Plus):
                 left_simplified = self.left.simplify(expand)
-                return Plus(Multiply(left_simplified, self.right.left.simplify(expand)),
-                            Multiply(left_simplified, self.right.right.simplify(expand))).simplify(expand)
+                return Plus(Multiply(left_simplified, self.right.left.simplify(expand).simplify(expand)),
+                            Multiply(left_simplified, self.right.right.simplify(expand)).simplify(expand)).simplify(expand)
 
         if isinstance(self.left, Const):
             if self.left.name == 1:
@@ -786,32 +790,37 @@ class Multiply(BinOp):
         if isinstance(self.left, Pow) and isinstance(self.right, Pow):
             # Same bases
             if str(self.left.left) == str(self.right.left):
-                exponents_simplified = Plus(self.left.right.simplify(expand).fractionify(),
-                                            self.right.right.simplify(expand).fractionify()).simplify(expand)
-                # Adding fractionify for cases like 2 + 2 ^ (-1)
+                exponents_simplified = Plus(self.left.right.simplify(expand),
+                                            self.right.right.simplify(expand)).simplify(expand)
 
                 # If the exponents can get simplified:
                 if str(exponents_simplified) != str(Plus(self.left.right, self.right.right)):
                     return Pow(self.left.left.simplify(expand),
-                               exponents_simplified)
+                               exponents_simplified).simplify(expand)
             # Same exponents
             if str(self.left.right) == str(self.right.right):
                 bases_simplified = Multiply(self.left.left.simplify(expand), self.right.left.simplify(expand)).simplify(
                     expand)
                 # If the bases can get simplified
                 if str(bases_simplified) != str(Multiply(self.left.left, self.right.left)):
-                    return Pow(bases_simplified, self.left.right.simplify(expand))
+                    return Pow(bases_simplified, self.left.right.simplify(expand)).simplify(expand)
+            # left_exponent_negative, left_abs_of_exponent = is_minus(self.left.right)
+            # right_exponent_negative, right_abs_of_exponent = is_minus(self.right.right)
+            # if left_exponent_negative and right_exponent_negative:
+            #     bases_simplified = Multiply(Pow(self.left.left.simplify(expand), left_abs_of_exponent.simplify(expand)).simplify(expand), Pow(self.right.left.simplify(expand), right_abs_of_exponent.simplify(expand)).simplify(expand)).simplify(expand)
+            #     if str(bases_simplified) != str(Multiply(Pow(self.left.left, left_abs_of_exponent), Pow(self.right.left, right_abs_of_exponent))):
+            #         return Pow(bases_simplified, Const(-1))
 
         # (base ^ exp) * base
         if isinstance(self.left, Pow) and str(self.left.left) == str(self.right):
-            exponents_simplified = Plus(self.left.right.simplify(expand).fractionify(), Const(1)).simplify(expand)
+            exponents_simplified = Plus(self.left.right.simplify(expand), Const(1)).simplify(expand)
             # If the exponents can get simplified
             if str(exponents_simplified) != str(Plus(self.left.right, Const(1))):
                 return Pow(self.right.simplify(expand), exponents_simplified)
 
         # base * (base ^ exp)
         if isinstance(self.right, Pow) and str(self.right.left) == str(self.left):
-            exponents_simplified = Plus(self.right.right.simplify(expand).fractionify(), Const(1)).simplify(expand)
+            exponents_simplified = Plus(self.right.right.simplify(expand), Const(1)).simplify(expand)
             # If the exponents can get simplified
             if str(exponents_simplified) != str(Plus(self.right.right, Const(1))):
                 return Pow(self.left.simplify(expand), exponents_simplified)
@@ -1206,14 +1215,14 @@ class Multiply(BinOp):
 
         return Multiply(self.left.trig_simplify(), self.right.trig_simplify())
 
-    def fractionify(self) -> Expr:
+    def fractionify(self, expand: bool) -> Expr:
         numerator, denominator = filter_neg_powers(self)
         if denominator:
             if isinstance(denominator, Const) and denominator.name == 1:
-                return numerator.fractionify()
+                return numerator.fractionify(expand)
             else:
-                return Multiply(numerator.fractionify(), Pow(denominator.fractionify(), Const(-1)))
-        return Multiply(self.left.fractionify(), self.right.fractionify())
+                return Multiply(numerator.fractionify(expand), Pow(denominator.simplify(expand).fractionify(expand), Const(-1)))
+        return Multiply(self.left.fractionify(expand), self.right.fractionify(expand))
 
 
 def filter_neg_powers(expr: Expr) -> tuple[Expr, Optional[Expr]]:
@@ -1435,9 +1444,9 @@ class Pow(BinOp):
                     else:
                         return '\\sqrt[' + str(n) + ']{' + self.left.get_latex() + '}'
 
-        if isinstance(self.left, Trig):
+        if isinstance(self.left, Trig) and not (isinstance(self.right, Const) and self.right.name == -1):
             return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
-        if isinstance(self.left, Log):
+        if isinstance(self.left, Log) and not (isinstance(self.right, Const) and self.right.name == -1):
             if isinstance(self.left.base, Const) and self.left.base.name == 'e':
                 return '{ \\ln } ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
             return '{\\log_{ ' + self.left.base.get_latex() + '} } ' + '^' + '{ ' + self.right.get_latex() + '} ' \
@@ -1445,6 +1454,8 @@ class Pow(BinOp):
         if isinstance(self.left, Plus) or isinstance(self.left, Multiply) or isinstance(self.left, Pow) or \
                 is_minus(self.left)[0]:
             left_latex = '\\left( ' + self.left.get_latex() + '\\right) '
+        elif isinstance(self.left, Func):  # For Func^(-1)
+            left_latex = '\\left[ ' + self.left.get_latex() + '\\right] '
         else:
             left_latex = self.left.get_latex()
         right_latex = self.right.get_latex()
@@ -1557,7 +1568,7 @@ class Pow(BinOp):
             if self.right.name >= 0:
                 return Const(self.left.name ** self.right.name)
             else:
-                return Pow(Const(self.left.name ** (-self.right.name)), Const(-1))
+                return Multiply(Const(1), Pow(Const(self.left.name ** (-self.right.name)), Const(-1)))
 
         if isinstance(self.left, Multiply):
             right_simplified = self.right.simplify(expand)
@@ -1629,13 +1640,13 @@ class Pow(BinOp):
 
         return Pow(self.left.trig_simplify(), self.right.trig_simplify())
 
-    def fractionify(self) -> Expr:
+    def fractionify(self, expand: bool) -> Expr:
         negative, abs_of_exponent = is_minus(self.right)
         if negative:
             if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
                 return Multiply(Const(1), Pow(self.left, Const(-1)))
             return Multiply(Const(1), Pow(Pow(self.left, abs_of_exponent), Const(-1)))
-        return Pow(self.left.fractionify(), self.right.fractionify())
+        return Pow(self.left.fractionify(expand), self.right.fractionify(expand))
 
 
 def choose(n, k):
@@ -1697,11 +1708,12 @@ class Trig(Func):
         - arg: the argument passed into the trig function
 
     Representation Invariants:
-        - self.name in {'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan'}
+        - self.name in {'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'arccsc', 'arcsec',
+        'arccot'}
     """
     name: str
     arg: Expr
-    VALID_NAMES = {'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan'}
+    VALID_NAMES = {'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'arccsc', 'arcsec', 'arccot'}
 
     def __init__(self, name: str, arg: Expr) -> None:
         try:
@@ -1716,6 +1728,8 @@ class Trig(Func):
         return self.name + ' ( ' + str(self.arg) + ') '
 
     def get_latex(self) -> str:
+        if self.name in {'arccsc', 'arcsec', 'arccot'}:
+            return '\\text{' + self.name + '} \\left( ' + self.arg.get_latex() + '\\right) '
         return '\\' + self.name + ' \\left( ' + self.arg.get_latex() + '\\right) '
 
     def differentiate(self, respect_to: str) -> tuple[Expr, list]:
@@ -1791,7 +1805,7 @@ class Trig(Func):
             #                          )
             #                 )
 
-        if self.name == 'arcsin':  #todo did up to here steps
+        if self.name == 'arcsin':
             steps = [(Multiply(Diff(self.arg, respect_to),
                               Pow(Plus(Const(1),
                                        Multiply(Const(-1),
@@ -1829,24 +1843,47 @@ class Trig(Func):
                                       Pow(Plus(Pow(self.arg, Const(2)), Const(1)), Const(-1))), item[1], item[2]))
             return Multiply(arg_differentiated,
                             Pow(Plus(Pow(self.arg, Const(2)), Const(1)), Const(-1))), steps
+        if self.name == 'arccsc':
+            steps = [(Diff(Trig('arcsin', Pow(self.arg, Const(-1))), respect_to), 'Use the following identity: ',
+                     f'\\displaystyle\\left[\\text{{arccsc}}(u({respect_to}))\\right]\'=\\left[\\arcsin\\left(\\frac{{1}}{{u({respect_to})}}\\right)\\right]\'=\\left[\\arcsin(\\left[u({respect_to})\\right]^{{-1}})\\right]\'')]
+            differentiated, differentiated_steps = Trig('arcsin', Pow(self.arg, Const(-1))).differentiate(respect_to)
+            for item in differentiated_steps:
+                steps.append(item)
+            return differentiated, steps
+
+        if self.name == 'arcsec':
+            steps = [(Diff(Trig('arccos', Pow(self.arg, Const(-1))), respect_to), 'Use the following identity: ',
+                      f'\\displaystyle\\left[\\text{{arcsec}}(u({respect_to}))\\right]\'=\\left[\\arccos\\left(\\frac{{1}}{{u({respect_to})}}\\right)\\right]\'=\\left[\\arccos(\\left[u({respect_to})\\right]^{{-1}})\\right]\'')]
+            differentiated, differentiated_steps = Trig('arccos', Pow(self.arg, Const(-1))).differentiate(respect_to)
+            for item in differentiated_steps:
+                steps.append(item)
+            return differentiated, steps
+
+        if self.name == 'arccot':
+            steps = [(Diff(Trig('arctan', Pow(self.arg, Const(-1))), respect_to), 'Use the following identity: ',
+                      f'\\displaystyle\\left[\\text{{arccot}}(u({respect_to}))\\right]\'=\\left[\\arctan\\left(\\frac{{1}}{{u({respect_to})}}\\right)\\right]\'=\\left[\\arctan(\\left[u({respect_to})\\right]^{{-1}})\\right]\'')]
+            differentiated, differentiated_steps = Trig('arctan', Pow(self.arg, Const(-1))).differentiate(respect_to)
+            for item in differentiated_steps:
+                steps.append(item)
+            return differentiated, steps
 
     def simplify(self, expand: bool) -> Expr:
-        if self.name == 'tan':
-            return Multiply(Trig('sin', self.arg.simplify(expand)),
-                            Pow(Trig('cos', self.arg.simplify(expand)), Const(-1)))
-        if self.name == 'sec':
-            return Multiply(Const(1), Pow(Trig('cos', self.arg.simplify(expand)), Const(-1)))
-        if self.name == 'csc':
-            return Multiply(Const(1), Pow(Trig('sin', self.arg.simplify(expand)), Const(-1)))
-        if self.name == 'cot':
-            return Multiply(Const(1), Pow(Trig('tan', self.arg.simplify(expand)), Const(-1)))
+        # if self.name == 'tan':
+        #     return Multiply(Trig('sin', self.arg.simplify(expand)),
+        #                     Pow(Trig('cos', self.arg.simplify(expand)), Const(-1)))
+        # if self.name == 'sec':
+        #     return Multiply(Const(1), Pow(Trig('cos', self.arg.simplify(expand)), Const(-1)))
+        # if self.name == 'csc':
+        #     return Multiply(Const(1), Pow(Trig('sin', self.arg.simplify(expand)), Const(-1)))
+        # if self.name == 'cot':
+        #     return Multiply(Const(1), Pow(Trig('tan', self.arg.simplify(expand)), Const(-1)))
         return Trig(self.name, self.arg.simplify(expand))
 
     def trig_simplify(self) -> Expr:
         return Trig(self.name, self.arg.trig_simplify())
 
-    def fractionify(self) -> Expr:
-        return Trig(self.name, self.arg.fractionify())
+    def fractionify(self, expand: bool) -> Expr:
+        return Trig(self.name, self.arg.fractionify(expand))
 
 
 class Log(Func):
@@ -1954,8 +1991,8 @@ class Log(Func):
     def trig_simplify(self) -> Expr:
         return Log(self.base.trig_simplify(), self.arg.trig_simplify())
 
-    def fractionify(self) -> Expr:
-        return Log(self.base.fractionify(), self.arg.fractionify())
+    def fractionify(self, expand: bool) -> Expr:
+        return Log(self.base.fractionify(expand), self.arg.fractionify(expand))
 
 
 def process_to_list(obj: Expr) -> list[tuple[str, int | float | str]]:

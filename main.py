@@ -53,7 +53,7 @@ def tokenizer(text: str) -> list[str]:
     """Converts a string math input into a list of tokens that can be processed by the parser function."""
     names_2_char = {'ln', 'pi'}
     names_3_char = {'sin', 'cos', 'tan', 'csc', 'sec', 'cot', 'log'}
-    names_6_char = {'arcsin', 'arccos', 'arctan'}
+    names_6_char = {'arcsin', 'arccos', 'arctan', 'arccsc', 'arcsec', 'arccot'}
 
     bin_operators = {'+', '*', '/', '^'}
     result = []
@@ -81,6 +81,8 @@ def tokenizer(text: str) -> list[str]:
                 if text[i + 3] == '_':
                     i += 3
                     logs_and_open_paren.append('log')
+                    if text[i + 4] != '(':
+                        raise LogNoBaseError
                 else:
                     raise LogNoBaseError
             else:
@@ -402,7 +404,7 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
         curr = expr
         # Simplifying input first
         while str(curr) != str(prev1):
-            prev1, curr = curr, curr.rearrange()  #.fractionify()
+            prev1, curr = curr, curr.rearrange()  #.fractionify(expand)
             print('prev1: ' + str(prev1))
             print('curr : ' + str(curr))
 
@@ -412,14 +414,14 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
                 prev2, curr = curr, curr.simplify(expand=expand)
                 print('prev2: ' + str(prev2))
                 print('curr : ' + str(curr))
-        simplified_input = curr.rearrange().trig_simplify().rearrange().fractionify()
+        simplified_input = curr.rearrange().trig_simplify().rearrange().fractionify(expand)
 
         differentiated, steps = simplified_input.differentiate(variable)
         print('differentiated')
         prev1 = None
         curr = differentiated
         while str(curr) != str(prev1):
-            prev1, curr = curr, curr.rearrange()  #.fractionify()
+            prev1, curr = curr, curr.rearrange()  #.fractionify(expand)
             print('prev1: ' + str(prev1))
             print('curr : ' + str(curr))
 
@@ -432,7 +434,11 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
             # print(simplified)
         # todo: toggle below for graph
         # visualization_runner(curr)
-        differentiated = curr.rearrange().trig_simplify().rearrange().fractionify()
+        differentiated = curr.rearrange().trig_simplify().rearrange().fractionify(expand)
+
+        print(simplified_input)
+        print(differentiated)
+
         steps_latex = [item[0].get_latex() for item in steps]
         steps_explanation = [item[1] for item in steps]
         steps_explanation_latex = [item[2] for item in steps]
@@ -460,7 +466,7 @@ def input_preview(input_text: str, variable: str = 'x') -> str:
 #         curr = expr
 #         # Simplifying input first
 #         while str(curr) != str(prev1):
-#             prev1, curr = curr, curr.rearrange().fractionify()
+#             prev1, curr = curr, curr.rearrange().fractionify(expand)
 #             print('prev1: ' + str(prev1))
 #             print('curr : ' + str(curr))
 #
@@ -470,7 +476,7 @@ def input_preview(input_text: str, variable: str = 'x') -> str:
 #                 prev2, curr = curr, curr.simplify(expand=expand)
 #                 print('prev2: ' + str(prev2))
 #                 print('curr : ' + str(curr))
-#         simplified_input = curr.trig_simplify().fractionify()
+#         simplified_input = curr.trig_simplify().fractionify(expand)
 #         return simplified_input.get_latex(), str(simplified_input)
 #     elif isinstance(expr, CustomError):
 #         return '\\text{' + expr.msg + '}', ''
