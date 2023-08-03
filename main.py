@@ -81,7 +81,7 @@ def tokenizer(text: str) -> list[str]:
                 if text[i + 3] == '_':
                     i += 3
                     logs_and_open_paren.append('log')
-                    if text[i + 4] != '(':
+                    if text[i + 1] != '(':
                         raise LogNoBaseError
                 else:
                     raise LogNoBaseError
@@ -107,7 +107,7 @@ def tokenizer(text: str) -> list[str]:
                         result.append('-1')
                         result.append('*')
                     else:
-                        result.append(text[i])
+                        result.append('-')
                 elif i + 1 < len(text) and ord('0') <= ord(text[i + 1]) <= ord('9'):
                     if prev_type not in {None, '('}:
                         result.append('+')

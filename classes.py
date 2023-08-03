@@ -29,12 +29,13 @@ from typing import *
 # implemented arccsc, arcsec, arccot
 # todo: forbid spaces between digits in main tokenizer
 # todo: debug 0^(1-1)
-# todo: debug "x- x"
-# todo: debug "1 - - --" appearing as 1-(-)
-# todo: raise error when log base is 0, 1, -1
-# todo: >=2 digits in base of log_(base)(arg)
+# debugged "x- x"
+# debuged "1 - - --" appearing as 1-(-)
+# todo: raise error when log base is 0, 1, negative; log arg is <= 0
+# debugged >=2 digits in base of log_(base)(arg)
 # todo: csc(x) / (1 / sin(x)) differentiated result no simplification to cot
-# todo: log_(3)(1), log_(2)(234/99) bug
+# log_(3)(1), log_(2)(234/99) debugged
+#  todo: make it so error messages are displayed in latex
 
 
 class Expr:
@@ -1911,11 +1912,13 @@ class Log(Func):
 
     def __init__(self, base: Expr, arg: Expr) -> None:
         try:
-            if isinstance(base, Const) and (base.name == 0 or base.name == 1):
-                raise LogBaseError
+            if isinstance(base, Const) and isinstance(base.name, int) and (base.name <= 0 or base.name == 1):
+                raise LogError
             self.base = base
+            if isinstance(arg, Const) and isinstance(arg.name, int) and arg.name <= 0:
+                raise LogError
             super().__init__(arg)
-        except LogBaseError as error:
+        except LogError as error:
             print(error.msg)
 
     def __str__(self) -> str:
@@ -1977,10 +1980,10 @@ class Log(Func):
         arg_simplified = self.arg.simplify(expand)
 
         # logb(m * n) = logb(m) + logb(n)
-        if isinstance(self.arg, Multiply):
-            if str(arg_simplified) == str(self.arg):
-                return Plus(Log(base_simplified, self.arg.left.simplify(expand)).simplify(expand),
-                            Log(base_simplified, self.arg.right.simplify(expand)).simplify(expand)).simplify(expand)
+        # if isinstance(self.arg, Multiply):
+        #     if str(arg_simplified) == str(self.arg):
+        #         return Plus(Log(base_simplified, self.arg.left.simplify(expand)).simplify(expand),
+        #                     Log(base_simplified, self.arg.right.simplify(expand)).simplify(expand)).simplify(expand)
 
         # logb(m ^ n) = n * logb(m)
         if isinstance(self.arg, Pow):
@@ -2084,8 +2087,8 @@ def get_arrangement_type(expr: Expr) -> tuple:  # TODO: TEST
     return ('Other', expr, Const(1), Const(1), None, None)
 
 
-class LogBaseError(Exception):
-    """Raised when the user attempts to define log(0).
+class LogError(Exception):
+    """Raised when the user attempts to define an invalid logarithm.
 
     Instance Attributes:
         - msg: the error message
@@ -2093,7 +2096,7 @@ class LogBaseError(Exception):
     msg: str
 
     def __init__(self) -> None:
-        self.msg = 'Logarithm base is invalid!'
+        self.msg = 'Logarithm is invalid!'
 
 
 class TrigError(Exception):
