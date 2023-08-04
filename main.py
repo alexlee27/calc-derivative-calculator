@@ -4,23 +4,18 @@ from classes import *
 from tree_visualization import *
 
 
-# class CustomError(Exception):
-#     """A class for custom errors.
-#
-#     Instance Attributes:
-#         - msg: the error message
-#     """
-#     msg = ''
+class InputException(Exception):
+    """A class for custom exceptions regarding input."""
 
 
-class ParenthesesError(Exception):
+class ParenthesesError(InputException):
     """Raised when there is an invalid input of parentheses.
     """
     def __str__(self) -> str:
         return 'Mismatched Parentheses!'
 
 
-class LogNoBaseError(Exception):
+class LogNoBaseError(InputException):
     """Raised when the user does not define the base of a logarithm that is not the natural logarithm (ln).
     """
 
@@ -28,7 +23,7 @@ class LogNoBaseError(Exception):
         return 'Type the input in the form log_(base)(argument).'
 
 
-class InvalidInputError(Exception):
+class InvalidInputError(InputException):
     """Raised when the user enters invalid math input.
     """
 
@@ -36,7 +31,7 @@ class InvalidInputError(Exception):
         return 'Please check your input.'
 
 
-class DecimalError(Exception):
+class DecimalError(InputException):
     """Raised when the user attempts to input a decimal.
     """
 
@@ -55,102 +50,107 @@ def tokenizer(text: str) -> list[str]:
     i = 0
     prev_type = None
     logs_and_open_paren = []
-    while i < len(text):
-        if text[i] == ' ':
-            pass
-        elif i + 2 <= len(text) and text[i:i+2] in names_2_char:
-            if prev_type in {')', 'digit', 'letter'}:
-                result.append('*')
-            result.append(text[i:i+2])
-            if result[-1] == 'ln':
+    try:
+        while i < len(text):
+            if text[i] == ' ':
+                pass
+            elif i + 2 <= len(text) and text[i:i+2] in names_2_char:
+                if prev_type in {')', 'digit', 'letter'}:
+                    result.append('*')
+                result.append(text[i:i+2])
+                if result[-1] == 'ln':
+                    prev_type = 'function'
+                else:  # pi
+                    prev_type = 'letter'
+                i += 1
+            elif i + 3 <= len(text) and text[i:i+3] in names_3_char:
+                if prev_type in {')', 'digit', 'letter'}:
+                    result.append('*')
+                result.append(text[i:i+3])
                 prev_type = 'function'
-            else:  # pi
-                prev_type = 'letter'
-            i += 1
-        elif i + 3 <= len(text) and text[i:i+3] in names_3_char:
-            if prev_type in {')', 'digit', 'letter'}:
-                result.append('*')
-            result.append(text[i:i+3])
-            prev_type = 'function'
-            if result[-1] == 'log':
-                if text[i + 3] == '_':
-                    i += 3
-                    logs_and_open_paren.append('log')
-                    if text[i + 1] != '(':
+                if result[-1] == 'log':
+                    if text[i + 3] == '_':
+                        i += 3
+                        logs_and_open_paren.append('log')
+                        if text[i + 1] != '(':
+                            raise LogNoBaseError
+                    else:
                         raise LogNoBaseError
                 else:
-                    raise LogNoBaseError
+                    i += 2
+            elif i + 6 <= len(text) and text[i:i+6] in names_6_char:
+                if prev_type in {')', 'digit', 'letter'}:
+                    result.append('*')
+                result.append(text[i:i + 6])
+                prev_type = 'function'
+                i += 5
             else:
-                i += 2
-        elif i + 6 <= len(text) and text[i:i+6] in names_6_char:
-            if prev_type in {')', 'digit', 'letter'}:
-                result.append('*')
-            result.append(text[i:i + 6])
-            prev_type = 'function'
-            i += 5
-        else:
-            if text[i] in bin_operators:
-                result.append(text[i])
-                prev_type = 'operator'
-            elif text[i] == '-':
-                j = i
-                while j + 1 < len(text) and text[j + 1] == ' ':
-                    j += 1
-                i = j
-                if not (i + 1 < len(text) and ord('0') <= ord(text[i + 1]) <= ord('9')):
-                    if prev_type in {None, '('}:
-                        result.append('-1')
-                        result.append('*')
+                if text[i] in bin_operators:
+                    result.append(text[i])
+                    prev_type = 'operator'
+                elif text[i] == '-':
+                    j = i
+                    while j + 1 < len(text) and text[j + 1] == ' ':
+                        j += 1
+                    i = j
+                    if not (i + 1 < len(text) and ord('0') <= ord(text[i + 1]) <= ord('9')):
+                        if prev_type in {None, '('}:
+                            result.append('-1')
+                            result.append('*')
+                        else:
+                            result.append('-')
+                    elif i + 1 < len(text) and ord('0') <= ord(text[i + 1]) <= ord('9'):
+                        if prev_type not in {None, '('}:
+                            result.append('+')
                     else:
-                        result.append('-')
-                elif i + 1 < len(text) and ord('0') <= ord(text[i + 1]) <= ord('9'):
-                    if prev_type not in {None, '('}:
-                        result.append('+')
+                        raise InvalidInputError
+                    prev_type = '-'
+                elif text[i] == '(':
+                    if prev_type in {')', 'digit', 'letter'}:
+                        if len(logs_and_open_paren) > 0 and logs_and_open_paren[-1] == 'log':
+                            logs_and_open_paren.pop()
+                        else:
+                            result.append('*')
+                    # elif prev_type == '-':
+                    #     result.append('-1')
+                    #     result.append('*')
+                    result.append(text[i])
+                    prev_type = '('
+                    logs_and_open_paren.append('(')
+                elif text[i] == ')':
+                    result.append(text[i])
+                    prev_type = ')'
+                    assert logs_and_open_paren[-1] == '('
+                    logs_and_open_paren.pop()
+                elif (ord('A') <= ord(text[i]) <= ord('Z')) or (ord('a') <= ord(text[i]) <= ord('z')):
+                    if prev_type in {')', 'digit', 'letter'}:
+                        result.append('*')
+                    # elif prev_type == '-':
+                    #     result.append('-1')
+                    #     result.append('*')
+                    result.append(text[i])
+                    prev_type = 'letter'
+                elif ord('0') <= ord(text[i]) <= ord('9'):
+                    token_accumlator = ''
+                    if prev_type in {')', 'letter'}:
+                        result.append('*')
+                    elif prev_type == '-':
+                        token_accumlator = '-'
+                    token_accumlator += text[i]
+                    while i + 1 < len(text) and ord('0') <= ord(text[i + 1]) <= ord('9'):
+                        token_accumlator += text[i + 1]
+                        i += 1
+                    result.append(token_accumlator)
+                    prev_type = 'digit'
+                elif text[i] == '.':
+                    raise DecimalError
                 else:
                     raise InvalidInputError
-                prev_type = '-'
-            elif text[i] == '(':
-                if prev_type in {')', 'digit', 'letter'}:
-                    if len(logs_and_open_paren) > 0 and logs_and_open_paren[-1] == 'log':
-                        logs_and_open_paren.pop()
-                    else:
-                        result.append('*')
-                # elif prev_type == '-':
-                #     result.append('-1')
-                #     result.append('*')
-                result.append(text[i])
-                prev_type = '('
-                logs_and_open_paren.append('(')
-            elif text[i] == ')':
-                result.append(text[i])
-                prev_type = ')'
-                assert logs_and_open_paren[-1] == '('
-                logs_and_open_paren.pop()
-            elif (ord('A') <= ord(text[i]) <= ord('Z')) or (ord('a') <= ord(text[i]) <= ord('z')):
-                if prev_type in {')', 'digit', 'letter'}:
-                    result.append('*')
-                # elif prev_type == '-':
-                #     result.append('-1')
-                #     result.append('*')
-                result.append(text[i])
-                prev_type = 'letter'
-            elif ord('0') <= ord(text[i]) <= ord('9'):
-                token_accumlator = ''
-                if prev_type in {')', 'letter'}:
-                    result.append('*')
-                elif prev_type == '-':
-                    token_accumlator = '-'
-                token_accumlator += text[i]
-                while i + 1 < len(text) and ord('0') <= ord(text[i + 1]) <= ord('9'):
-                    token_accumlator += text[i + 1]
-                    i += 1
-                result.append(token_accumlator)
-                prev_type = 'digit'
-            elif text[i] == '.':
-                raise DecimalError
-            else:
-                raise InvalidInputError
-        i += 1
+            i += 1
+    except InputException as error:
+        raise error
+    except Exception:
+        raise InvalidInputError
 
     return result
 
@@ -164,110 +164,116 @@ def string_to_expr(text: str, variables: set[str]) -> Expr:
     # Note that output_stack only contains Expr objects
     output_stack = []
     operator_stack = []
+    try:
+        for token in input_array:
+            typ = token_type(token)
+            if typ == 'Num':
+                output_stack.append(str_to_num(token, variables))
 
-    for token in input_array:
-        typ = token_type(token)
-        if typ == 'Num':
-            output_stack.append(str_to_num(token, variables))
+            elif typ == 'Func':
+                operator_stack.append(token)
 
-        elif typ == 'Func':
-            operator_stack.append(token)
+            elif typ == 'LogNoBase':
+                operator_stack.append(token)
 
-        elif typ == 'LogNoBase':
-            operator_stack.append(token)
+            elif typ == 'BinOp':
+                while len(operator_stack) > 0 and operator_stack[-1] != '(' \
+                        and (precedence(operator_stack[-1]) > precedence(token)
+                             or (precedence(operator_stack[-1]) == precedence(token)
+                                 and is_left_associative(token))):
+                    subtree1 = output_stack.pop()
+                    subtree2 = output_stack.pop()
 
-        elif typ == 'BinOp':
-            while len(operator_stack) > 0 and operator_stack[-1] != '(' \
-                    and (precedence(operator_stack[-1]) > precedence(token)
-                         or (precedence(operator_stack[-1]) == precedence(token)
-                             and is_left_associative(token))):
-                subtree1 = output_stack.pop()
-                subtree2 = output_stack.pop()
+                    tree = str_to_bin_op(operator_stack.pop(), subtree2, subtree1)
 
-                tree = str_to_bin_op(operator_stack.pop(), subtree2, subtree1)
-
-                output_stack.append(tree)
-
-            operator_stack.append(token)
-        elif typ == '(':
-            operator_stack.append(token)
-
-        else:  # typ == ')'
-            while operator_stack[-1] != '(':
-                operator = operator_stack.pop()
-                operator_type = token_type(operator)
-
-                if operator_type == 'Func':
-                    subtree = output_stack.pop()
-                    tree = str_to_func(operator, subtree, variables)
                     output_stack.append(tree)
 
-                elif operator_type == 'LogNoBase':
+                operator_stack.append(token)
+            elif typ == '(':
+                operator_stack.append(token)
+
+            else:  # typ == ')'
+                while operator_stack[-1] != '(':
+                    operator = operator_stack.pop()
+                    operator_type = token_type(operator)
+
+                    if operator_type == 'Func':
+                        subtree = output_stack.pop()
+                        tree = str_to_func(operator, subtree, variables)
+                        output_stack.append(tree)
+
+                    elif operator_type == 'LogNoBase':
+                        # Keep the logarithm in the operator stack, but with the base augmented.
+                        subtree = output_stack.pop()
+                        new_operator = (operator_stack.pop(), subtree)
+                        operator_stack.append(new_operator)
+
+                    elif operator_type == 'LogWithBase':
+                        base = operator[1]
+                        exponent = output_stack.pop()
+                        tree = get_log_custom_base(base, exponent)
+                        output_stack.append(tree)
+
+                    elif operator_type == 'BinOp':
+                        subtree1 = output_stack.pop()
+                        subtree2 = output_stack.pop()
+                        tree = str_to_bin_op(operator, subtree2, subtree1)
+                        output_stack.append(tree)
+                # top of operator_stack is now '('
+                operator_stack.pop()  # discarding the '('
+
+                if len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'Func':
+                    subtree = output_stack.pop()
+                    tree = str_to_func(operator_stack.pop(), subtree, variables)
+                    output_stack.append(tree)
+                elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogNoBase':
                     # Keep the logarithm in the operator stack, but with the base augmented.
                     subtree = output_stack.pop()
                     new_operator = (operator_stack.pop(), subtree)
                     operator_stack.append(new_operator)
-
-                elif operator_type == 'LogWithBase':
-                    base = operator[1]
+                elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogWithBase':
+                    base = operator_stack.pop()[1]
                     exponent = output_stack.pop()
                     tree = get_log_custom_base(base, exponent)
                     output_stack.append(tree)
+        while len(operator_stack) > 0:
+            if operator_stack[-1] == '(':
+                raise ParenthesesError
 
-                elif operator_type == 'BinOp':
-                    subtree1 = output_stack.pop()
-                    subtree2 = output_stack.pop()
-                    tree = str_to_bin_op(operator, subtree2, subtree1)
-                    output_stack.append(tree)
-            # top of operator_stack is now '('
-            operator_stack.pop()  # discarding the '('
+            operator = operator_stack.pop()
+            operator_type = token_type(operator)
 
-            if len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'Func':
+            if operator_type == 'Func':
                 subtree = output_stack.pop()
-                tree = str_to_func(operator_stack.pop(), subtree, variables)
+                tree = str_to_func(operator, subtree, variables)
                 output_stack.append(tree)
-            elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogNoBase':
+
+            elif operator_type == 'LogNoBase':
                 # Keep the logarithm in the operator stack, but with the base augmented.
                 subtree = output_stack.pop()
                 new_operator = (operator_stack.pop(), subtree)
                 operator_stack.append(new_operator)
-            elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogWithBase':
-                base = operator_stack.pop()[1]
+
+            elif operator_type == 'LogWithBase':
+                base = operator[1]
                 exponent = output_stack.pop()
                 tree = get_log_custom_base(base, exponent)
                 output_stack.append(tree)
-    while len(operator_stack) > 0:
-        if operator_stack[-1] == '(':
-            raise ParenthesesError
 
-        operator = operator_stack.pop()
-        operator_type = token_type(operator)
+            elif operator_type == 'BinOp':
+                subtree1 = output_stack.pop()
+                subtree2 = output_stack.pop()
+                tree = str_to_bin_op(operator, subtree2, subtree1)
+                output_stack.append(tree)
 
-        if operator_type == 'Func':
-            subtree = output_stack.pop()
-            tree = str_to_func(operator, subtree, variables)
-            output_stack.append(tree)
-
-        elif operator_type == 'LogNoBase':
-            # Keep the logarithm in the operator stack, but with the base augmented.
-            subtree = output_stack.pop()
-            new_operator = (operator_stack.pop(), subtree)
-            operator_stack.append(new_operator)
-
-        elif operator_type == 'LogWithBase':
-            base = operator[1]
-            exponent = output_stack.pop()
-            tree = get_log_custom_base(base, exponent)
-            output_stack.append(tree)
-
-        elif operator_type == 'BinOp':
-            subtree1 = output_stack.pop()
-            subtree2 = output_stack.pop()
-            tree = str_to_bin_op(operator, subtree2, subtree1)
-            output_stack.append(tree)
-
-    # Outside the for loop
-    return output_stack.pop()
+        # Outside the for loop
+        return output_stack.pop()
+    except InputException as error:
+        raise error
+    except MathException as error:
+        raise error
+    except Exception:
+        raise InvalidInputError
 
 
 def token_type(token: Any) -> str:

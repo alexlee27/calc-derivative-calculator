@@ -32,10 +32,10 @@ from typing import *
 # debugged "x- x"
 # debuged "1 - - --" appearing as 1-(-)
 # raised error when log base is 0, 1, negative; log arg is <= 0
-# debugged >=2 digits in base of log_(base)(arg)
-# todo: csc(x) / (1 / sin(x)) differentiated result no simplification to cot
+# debugged >=2 digits in base of log_(base)(rg)
+# debugged csc(x) / (1 / sin(x)) differentiated result no simplification to cot
 # log_(3)(1), log_(2)(234/99) debugged
-#  todo: make it so error messages are displayed in latex
+# made it so error messages are displayed in latex
 
 
 class Expr:
@@ -761,6 +761,13 @@ class Multiply(BinOp):
                     Multiply(self.left, right_differentiated)), steps
 
     def simplify(self, expand: bool) -> Expr:
+        # something1 / something2, where something2 is negative
+        if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
+            denominator_is_negative, denominator_abs = is_minus(self.right.left, True)
+            if denominator_is_negative:
+                return Multiply(Multiply(Const(-1), self.left.simplify(expand)).simplify(expand),
+                                Pow(denominator_abs.simplify(expand), Const(-1)).simplify(expand)).simplify(expand)
+
         # Preventing simplification of 1 * (something ^ -1) into (something ^ -1)
         if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
             if isinstance(self.left, Const) and self.left.name == 1:
@@ -839,6 +846,7 @@ class Multiply(BinOp):
         #         isinstance(self.right.right.right, Const) and self.right.right.right.name == -1:
         #
 
+
         # Simplifying n / m (fractions)
         if isinstance(self.left, Const) and isinstance(self.left.name, int) and isinstance(self.right, Pow) and \
                 isinstance(self.right.left, Const) and isinstance(self.right.left.name, int) and \
@@ -852,6 +860,7 @@ class Multiply(BinOp):
                 return Const(numerator // divisor)
             else:
                 return Multiply(Const(numerator // divisor), Pow(Const(new_denominator), Const(-1)))
+
 
         #       *
         #      / \
@@ -1241,7 +1250,7 @@ def filter_neg_powers(expr: Expr) -> tuple[Expr, Optional[Expr]]:
     """
     if not isinstance(expr, Multiply):
         if isinstance(expr, Pow):
-            negative, abs_of_exponent = is_minus(expr.right)
+            negative, abs_of_exponent = is_minus(expr.right, True)
             if negative:
                 if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
                     return Const(1), expr.left
@@ -1361,17 +1370,32 @@ def get_digit_tree(i: int, lst: list, digit_tree: Expr) -> Expr:
     return digit_tree
 
 
-def is_minus(expr: Expr) -> tuple[bool, Expr]:  # todo: test
+def is_minus(expr: Expr, just_look_for_minus_sign: bool) -> tuple[bool, Expr]:  # todo: test
     """Returns a tuple in the form of (boolean, abs_value), where boolean is whether expr is negative, and
     abs_value is the absolute value of expr.
+
+    When just_consider_minus_sign is True, values like -x and -a would be evaluated to be negative
+    When just_consider_minus_sign is False, values like -x and -a would NOT be evaluated to be negative
 
     Note: even if expr is, in fact, negative, if it is not simplified then it may not return True.
     """
     if isinstance(expr, Const) and (isinstance(expr.name, int) or isinstance(expr.name, float)) and expr.name < 0:
         return (True, Const(-expr.name))
+    if isinstance(expr, Pow):
+        left_is_minus, left_abs_value = is_minus(expr.left, just_look_for_minus_sign)
+        right_is_minus = is_minus(expr.right, just_look_for_minus_sign)[0]
+        if right_is_minus:
+            if left_is_minus:
+                return (True, Pow(left_abs_value, expr.right))
     if isinstance(expr, Multiply):
-        left_is_minus, left_abs_value = is_minus(expr.left)
-        right_is_minus, right_abs_value = is_minus(expr.right)
+        if not just_look_for_minus_sign:
+            # ex) -x shouldn't return True since x is a variable
+            if isinstance(expr.left, Var) or (isinstance(expr.left, Const) and isinstance(expr.left.name, str) and expr.left.name not in Const.PREDEFINED_VALUES):
+                return (False, expr)
+            if isinstance(expr.right, Var) or (isinstance(expr.right, Const) and isinstance(expr.right.name, str) and expr.right.name not in Const.PREDEFINED_VALUES):
+                return (False, expr)
+        left_is_minus, left_abs_value = is_minus(expr.left, just_look_for_minus_sign)
+        right_is_minus, right_abs_value = is_minus(expr.right, just_look_for_minus_sign)
         if left_is_minus and not right_is_minus:
             return (True, Multiply(left_abs_value, right_abs_value))
         elif right_is_minus and not left_is_minus:
@@ -1385,9 +1409,12 @@ class Const(Num):
     Instance Attributes:
         - name: the number self represents
             - 'e' represents Euler's number
+            - 'i' represents the imaginary unit
             - 'pi' represents π (the ratio of a circle's circumference to its diameter)
+        - PREDEFINED_VALUES: contains e, i, pi
     """
     name: int | float | str
+    PREDEFINED_VALUES = {'e', 'i', 'pi'}
 
     def __init__(self, name: int | float | str) -> None:
         super().__init__(name)
@@ -1427,7 +1454,7 @@ class Pow(BinOp):
 
     def __init__(self, base: Expr, exponent: Expr) -> None:
         if isinstance(base, Const) and base.name == 0 and isinstance(exponent, Const) and exponent.name < 0:
-            raise ZeroDivisionError
+            raise DivByZeroError
         super().__init__(base, exponent)
 
     def __str__(self) -> str:
@@ -1458,7 +1485,7 @@ class Pow(BinOp):
             return '{\\log_{ ' + self.left.base.get_latex() + '} } ' + '^' + '{ ' + self.right.get_latex() + '} ' \
                 + '\\left( ' + self.left.arg.get_latex() + '\\right) '
         if isinstance(self.left, Plus) or isinstance(self.left, Multiply) or isinstance(self.left, Pow) or \
-                is_minus(self.left)[0]:
+                is_minus(self.left, True)[0]:
             left_latex = '\\left( ' + self.left.get_latex() + '\\right) '
         elif isinstance(self.left, Func):  # For Func^(-1)
             left_latex = '\\left[ ' + self.left.get_latex() + '\\right] '
@@ -1574,7 +1601,7 @@ class Pow(BinOp):
             if self.right.name >= 0:
                 return Const(self.left.name ** self.right.name)
             else:
-                return Multiply(Const(1), Pow(Const(self.left.name ** (-self.right.name)), Const(-1)))
+                return Pow(Const(self.left.name ** (-self.right.name)), Const(-1))  # removed putting 1 in numerator
 
         if isinstance(self.left, Multiply):
             right_simplified = self.right.simplify(expand)
@@ -1611,7 +1638,7 @@ class Pow(BinOp):
 
     def trig_simplify(self) -> Expr:
         if isinstance(self.left, Trig) and self.left.name in {'sin', 'cos', 'tan', 'csc', 'sec', 'cot'}:
-            negative, abs_of_exponent = is_minus(self.right)
+            negative, abs_of_exponent = is_minus(self.right, True)
             if negative:
                 if self.left.name == 'sin':
                     if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
@@ -1647,7 +1674,7 @@ class Pow(BinOp):
         return Pow(self.left.trig_simplify(), self.right.trig_simplify())
 
     def fractionify(self, expand: bool) -> Expr:
-        negative, abs_of_exponent = is_minus(self.right)
+        negative, abs_of_exponent = is_minus(self.right, True)
         if negative:
             if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
                 return Multiply(Const(1), Pow(self.left, Const(-1)))
@@ -1722,13 +1749,10 @@ class Trig(Func):
     VALID_NAMES = {'sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'arccsc', 'arcsec', 'arccot'}
 
     def __init__(self, name: str, arg: Expr) -> None:
-        try:
-            if name not in self.VALID_NAMES:
-                raise TrigError
-            self.name = name
-            super().__init__(arg)
-        except TrigError as error:
-            print(error.msg)
+        if name not in self.VALID_NAMES:
+            raise TrigError
+        self.name = name
+        super().__init__(arg)
 
     def __str__(self) -> str:
         return self.name + ' ( ' + str(self.arg) + ') '
@@ -1874,15 +1898,15 @@ class Trig(Func):
             return differentiated, steps
 
     def simplify(self, expand: bool) -> Expr:
-        # if self.name == 'tan':
-        #     return Multiply(Trig('sin', self.arg.simplify(expand)),
-        #                     Pow(Trig('cos', self.arg.simplify(expand)), Const(-1)))
-        # if self.name == 'sec':
-        #     return Multiply(Const(1), Pow(Trig('cos', self.arg.simplify(expand)), Const(-1)))
-        # if self.name == 'csc':
-        #     return Multiply(Const(1), Pow(Trig('sin', self.arg.simplify(expand)), Const(-1)))
-        # if self.name == 'cot':
-        #     return Multiply(Const(1), Pow(Trig('tan', self.arg.simplify(expand)), Const(-1)))
+        if self.name == 'tan':
+            return Multiply(Trig('sin', self.arg.simplify(expand)),
+                            Pow(Trig('cos', self.arg.simplify(expand)), Const(-1)))
+        if self.name == 'sec':
+            return Multiply(Const(1), Pow(Trig('cos', self.arg.simplify(expand)), Const(-1)))
+        if self.name == 'csc':
+            return Multiply(Const(1), Pow(Trig('sin', self.arg.simplify(expand)), Const(-1)))
+        if self.name == 'cot':
+            return Multiply(Const(1), Pow(Trig('tan', self.arg.simplify(expand)), Const(-1)))
         return Trig(self.name, self.arg.simplify(expand))
 
     def trig_simplify(self) -> Expr:
@@ -1908,15 +1932,16 @@ class Log(Func):
     arg: Expr
 
     def __init__(self, base: Expr, arg: Expr) -> None:
-        try:
-            if isinstance(base, Const) and isinstance(base.name, int) and (base.name <= 0 or base.name == 1):
-                raise LogError
-            self.base = base
-            if isinstance(arg, Const) and isinstance(arg.name, int) and arg.name <= 0:
-                raise LogError
-            super().__init__(arg)
-        except LogError as error:
-            print(error.msg)
+        if isinstance(base, Const) and isinstance(base.name, int) and (base.name <= 0 or base.name == 1):
+            raise LogError
+        self.base = base
+        if isinstance(arg, Const) and isinstance(arg.name, int) and arg.name <= 0:
+            raise LogError
+        base_is_negative = is_minus(base, False)[0]
+        arg_is_negative = is_minus(arg, False)[0]
+        if base_is_negative or arg_is_negative:
+            raise LogError
+        super().__init__(arg)
 
     def __str__(self) -> str:
         if isinstance(self.base, Const) and self.base.name == 'e':
@@ -2084,7 +2109,11 @@ def get_arrangement_type(expr: Expr) -> tuple:  # TODO: TEST
     return ('Other', expr, Const(1), Const(1), None, None)
 
 
-class LogError(Exception):
+class MathException(Exception):
+    """A class for custom exceptions regarding math."""
+
+
+class LogError(MathException):
     """Raised when the user attempts to define an invalid logarithm.
     """
 
@@ -2092,9 +2121,15 @@ class LogError(Exception):
         return 'Logarithm is invalid!'
 
 
-class TrigError(Exception):
+class TrigError(MathException):
     """Raised when the user tries to define an undefined trigonometric function.
     """
 
     def __str__(self) -> str:
         return 'The entered trigonometric function does not exist. Please try again!'
+
+
+class DivByZeroError(MathException):
+    """Raised when the user tries divide by 0."""
+    def __str__(self) -> str:
+        return 'You may not divide by zero!'
