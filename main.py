@@ -4,49 +4,44 @@ from classes import *
 from tree_visualization import *
 
 
-class CustomError(Exception):
-    """A class for custom errors.
+# class CustomError(Exception):
+#     """A class for custom errors.
+#
+#     Instance Attributes:
+#         - msg: the error message
+#     """
+#     msg = ''
 
-    Instance Attributes:
-        - msg: the error message
-    """
-    msg = ''
 
-
-class ParenthesesError(CustomError):
+class ParenthesesError(Exception):
     """Raised when there is an invalid input of parentheses.
-
-    Instance Attributes:
-        - msg: the error message
     """
-    msg = 'Mismatched Parentheses!'
+    def __str__(self) -> str:
+        return 'Mismatched Parentheses!'
 
 
-class LogNoBaseError(CustomError):
+class LogNoBaseError(Exception):
     """Raised when the user does not define the base of a logarithm that is not the natural logarithm (ln).
-
-    Instance Attributes:
-        - msg: the error message
     """
-    msg = 'Type the input in the form log_(base)(argument).'
+
+    def __str__(self) -> str:
+        return 'Type the input in the form log_(base)(argument).'
 
 
-class InvalidInputError(CustomError):
+class InvalidInputError(Exception):
     """Raised when the user enters invalid math input.
-
-    Instance Attributes:
-        - msg: the error message
     """
-    msg = 'Please check your input.'
+
+    def __str__(self) -> str:
+        return 'Please check your input.'
 
 
-class DecimalError(CustomError):
+class DecimalError(Exception):
     """Raised when the user attempts to input a decimal.
-
-    Instance Attributes:
-        - msg: the error message
     """
-    msg = 'Please enter decimals as fractions.'
+
+    def __str__(self) -> str:
+        return 'Please enter decimals as fractions.'
 
 
 def tokenizer(text: str) -> list[str]:
@@ -160,126 +155,119 @@ def tokenizer(text: str) -> list[str]:
     return result
 
 
-def string_to_expr(text: str, variables: set[str]) -> Expr | CustomError:
+def string_to_expr(text: str, variables: set[str]) -> Expr:
     """A parser function that converts a string math input to an Expr binary tree.
-    Returns the Exception object if there is an error.
 
     Involves using the Shunting yard algorithm (https://en.wikipedia.org/wiki/Shunting_yard_algorithm).
     """
-    try:
-        input_array = tokenizer(text)
-        # Note that output_stack only contains Expr objects
-        output_stack = []
-        operator_stack = []
+    input_array = tokenizer(text)
+    # Note that output_stack only contains Expr objects
+    output_stack = []
+    operator_stack = []
 
-        for token in input_array:
-            typ = token_type(token)
-            if typ == 'Num':
-                output_stack.append(str_to_num(token, variables))
+    for token in input_array:
+        typ = token_type(token)
+        if typ == 'Num':
+            output_stack.append(str_to_num(token, variables))
 
-            elif typ == 'Func':
-                operator_stack.append(token)
+        elif typ == 'Func':
+            operator_stack.append(token)
 
-            elif typ == 'LogNoBase':
-                operator_stack.append(token)
+        elif typ == 'LogNoBase':
+            operator_stack.append(token)
 
-            elif typ == 'BinOp':
-                while len(operator_stack) > 0 and operator_stack[-1] != '(' \
-                        and (precedence(operator_stack[-1]) > precedence(token)
-                             or (precedence(operator_stack[-1]) == precedence(token)
-                                 and is_left_associative(token))):
-                    subtree1 = output_stack.pop()
-                    subtree2 = output_stack.pop()
+        elif typ == 'BinOp':
+            while len(operator_stack) > 0 and operator_stack[-1] != '(' \
+                    and (precedence(operator_stack[-1]) > precedence(token)
+                         or (precedence(operator_stack[-1]) == precedence(token)
+                             and is_left_associative(token))):
+                subtree1 = output_stack.pop()
+                subtree2 = output_stack.pop()
 
-                    tree = str_to_bin_op(operator_stack.pop(), subtree2, subtree1)
+                tree = str_to_bin_op(operator_stack.pop(), subtree2, subtree1)
 
-                    output_stack.append(tree)
+                output_stack.append(tree)
 
-                operator_stack.append(token)
-            elif typ == '(':
-                operator_stack.append(token)
+            operator_stack.append(token)
+        elif typ == '(':
+            operator_stack.append(token)
 
-            else:  # typ == ')'
-                while operator_stack[-1] != '(':
-                    operator = operator_stack.pop()
-                    operator_type = token_type(operator)
+        else:  # typ == ')'
+            while operator_stack[-1] != '(':
+                operator = operator_stack.pop()
+                operator_type = token_type(operator)
 
-                    if operator_type == 'Func':
-                        subtree = output_stack.pop()
-                        tree = str_to_func(operator, subtree, variables)
-                        output_stack.append(tree)
-
-                    elif operator_type == 'LogNoBase':
-                        # Keep the logarithm in the operator stack, but with the base augmented.
-                        subtree = output_stack.pop()
-                        new_operator = (operator_stack.pop(), subtree)
-                        operator_stack.append(new_operator)
-
-                    elif operator_type == 'LogWithBase':
-                        base = operator[1]
-                        exponent = output_stack.pop()
-                        tree = get_log_custom_base(base, exponent)
-                        output_stack.append(tree)
-
-                    elif operator_type == 'BinOp':
-                        subtree1 = output_stack.pop()
-                        subtree2 = output_stack.pop()
-                        tree = str_to_bin_op(operator, subtree2, subtree1)
-                        output_stack.append(tree)
-                # top of operator_stack is now '('
-                operator_stack.pop()  # discarding the '('
-
-                if len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'Func':
+                if operator_type == 'Func':
                     subtree = output_stack.pop()
-                    tree = str_to_func(operator_stack.pop(), subtree, variables)
+                    tree = str_to_func(operator, subtree, variables)
                     output_stack.append(tree)
-                elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogNoBase':
+
+                elif operator_type == 'LogNoBase':
                     # Keep the logarithm in the operator stack, but with the base augmented.
                     subtree = output_stack.pop()
                     new_operator = (operator_stack.pop(), subtree)
                     operator_stack.append(new_operator)
-                elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogWithBase':
-                    base = operator_stack.pop()[1]
+
+                elif operator_type == 'LogWithBase':
+                    base = operator[1]
                     exponent = output_stack.pop()
                     tree = get_log_custom_base(base, exponent)
                     output_stack.append(tree)
-        while len(operator_stack) > 0:
-            if operator_stack[-1] == '(':
-                raise ParenthesesError
 
-            operator = operator_stack.pop()
-            operator_type = token_type(operator)
+                elif operator_type == 'BinOp':
+                    subtree1 = output_stack.pop()
+                    subtree2 = output_stack.pop()
+                    tree = str_to_bin_op(operator, subtree2, subtree1)
+                    output_stack.append(tree)
+            # top of operator_stack is now '('
+            operator_stack.pop()  # discarding the '('
 
-            if operator_type == 'Func':
+            if len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'Func':
                 subtree = output_stack.pop()
-                tree = str_to_func(operator, subtree, variables)
+                tree = str_to_func(operator_stack.pop(), subtree, variables)
                 output_stack.append(tree)
-
-            elif operator_type == 'LogNoBase':
+            elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogNoBase':
                 # Keep the logarithm in the operator stack, but with the base augmented.
                 subtree = output_stack.pop()
                 new_operator = (operator_stack.pop(), subtree)
                 operator_stack.append(new_operator)
-
-            elif operator_type == 'LogWithBase':
-                base = operator[1]
+            elif len(operator_stack) > 0 and token_type(operator_stack[-1]) == 'LogWithBase':
+                base = operator_stack.pop()[1]
                 exponent = output_stack.pop()
                 tree = get_log_custom_base(base, exponent)
                 output_stack.append(tree)
+    while len(operator_stack) > 0:
+        if operator_stack[-1] == '(':
+            raise ParenthesesError
 
-            elif operator_type == 'BinOp':
-                subtree1 = output_stack.pop()
-                subtree2 = output_stack.pop()
-                tree = str_to_bin_op(operator, subtree2, subtree1)
-                output_stack.append(tree)
+        operator = operator_stack.pop()
+        operator_type = token_type(operator)
 
-        # Outside the for loop
-        return output_stack.pop()
-    except CustomError as error:
-        return error
-    except Exception as error:
-        error = InvalidInputError()
-        return error
+        if operator_type == 'Func':
+            subtree = output_stack.pop()
+            tree = str_to_func(operator, subtree, variables)
+            output_stack.append(tree)
+
+        elif operator_type == 'LogNoBase':
+            # Keep the logarithm in the operator stack, but with the base augmented.
+            subtree = output_stack.pop()
+            new_operator = (operator_stack.pop(), subtree)
+            operator_stack.append(new_operator)
+
+        elif operator_type == 'LogWithBase':
+            base = operator[1]
+            exponent = output_stack.pop()
+            tree = get_log_custom_base(base, exponent)
+            output_stack.append(tree)
+
+        elif operator_type == 'BinOp':
+            subtree1 = output_stack.pop()
+            subtree2 = output_stack.pop()
+            tree = str_to_bin_op(operator, subtree2, subtree1)
+            output_stack.append(tree)
+
+    # Outside the for loop
+    return output_stack.pop()
 
 
 def token_type(token: Any) -> str:
@@ -402,64 +390,66 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
     returns a tuple in the form (input_simplfied_latex, differentiated_latex, input_simplified_string,
      differentiated_string, expand, steps_latex)
     """
-    expr = string_to_expr(input_text, {variable})
-    if isinstance(expr, Expr):
-        prev1 = None
-        curr = expr
-        # Simplifying input first
-        while str(curr) != str(prev1):
-            prev1, curr = curr, curr.rearrange()  #.fractionify(expand)
-            print('prev1: ' + str(prev1))
-            print('curr : ' + str(curr))
-
-            prev2 = None
-            while str(curr) != str(prev2):
-                # print(prev2)
-                prev2, curr = curr, curr.simplify(expand=expand)
-                print('prev2: ' + str(prev2))
+    try:
+        expr = string_to_expr(input_text, {variable})
+        if isinstance(expr, Expr):
+            prev1 = None
+            curr = expr
+            # Simplifying input first
+            while str(curr) != str(prev1):
+                prev1, curr = curr, curr.rearrange()  #.fractionify(expand)
+                print('prev1: ' + str(prev1))
                 print('curr : ' + str(curr))
-        simplified_input = curr.rearrange().trig_simplify().rearrange().fractionify(expand)
 
-        differentiated, steps = simplified_input.differentiate(variable)
-        print('differentiated')
-        prev1 = None
-        curr = differentiated
-        while str(curr) != str(prev1):
-            prev1, curr = curr, curr.rearrange()  #.fractionify(expand)
-            print('prev1: ' + str(prev1))
-            print('curr : ' + str(curr))
+                prev2 = None
+                while str(curr) != str(prev2):
+                    # print(prev2)
+                    prev2, curr = curr, curr.simplify(expand=expand)
+                    print('prev2: ' + str(prev2))
+                    print('curr : ' + str(curr))
+            simplified_input = curr.rearrange().trig_simplify().rearrange().fractionify(expand)
 
-            prev2 = None
-            while str(curr) != str(prev2):
-                # print(prev2)
-                prev2, curr = curr, curr.simplify(expand=expand)
-                print('prev2: ' + str(prev2))
+            differentiated, steps = simplified_input.differentiate(variable)
+            print('differentiated')
+            prev1 = None
+            curr = differentiated
+            while str(curr) != str(prev1):
+                prev1, curr = curr, curr.rearrange()  #.fractionify(expand)
+                print('prev1: ' + str(prev1))
                 print('curr : ' + str(curr))
-            # print(simplified)
-        # todo: toggle below for graph
-        # visualization_runner(curr)
-        differentiated = curr.rearrange().trig_simplify().rearrange().fractionify(expand)
 
-        print(simplified_input)
-        print(differentiated)
+                prev2 = None
+                while str(curr) != str(prev2):
+                    # print(prev2)
+                    prev2, curr = curr, curr.simplify(expand=expand)
+                    print('prev2: ' + str(prev2))
+                    print('curr : ' + str(curr))
+                # print(simplified)
+            # todo: toggle below for graph
+            # visualization_runner(curr)
+            differentiated = curr.rearrange().trig_simplify().rearrange().fractionify(expand)
 
-        steps_latex = [item[0].get_latex() for item in steps]
-        steps_explanation = [item[1] for item in steps]
-        steps_explanation_latex = [item[2] for item in steps]
-        return "\\displaystyle " + simplified_input.get_latex(), "\\displaystyle " + differentiated.get_latex(),\
-            str(simplified_input), str(differentiated), steps_latex, steps_explanation, steps_explanation_latex
-    elif isinstance(expr, CustomError):
-        return '\\text{' + expr.msg + '}', '', '', '', [], [], []
+            print(simplified_input)
+            print(differentiated)
+
+            steps_latex = [item[0].get_latex() for item in steps]
+            steps_explanation = [item[1] for item in steps]
+            steps_explanation_latex = [item[2] for item in steps]
+            return "\\displaystyle " + simplified_input.get_latex(), "\\displaystyle " + differentiated.get_latex(),\
+                str(simplified_input), str(differentiated), steps_latex, steps_explanation, steps_explanation_latex
+    except Exception as error:
+        return '\\text{' + str(error) + '}', '', '', '', [], [], []
 
 
 def input_preview(input_text: str, variable: str = 'x') -> str:
     """Returns the LaTeX code for input_text, provided it is valid.
     """
-    expr = string_to_expr(input_text, {variable})
-    if isinstance(expr, Expr):
-        return Diff(expr, variable).get_latex()
-    elif isinstance(expr, CustomError):
-        return '\\text{' + expr.msg + '}'
+    try:
+        expr = string_to_expr(input_text, {variable})
+        if isinstance(expr, Expr):
+            return Diff(expr, variable).get_latex()
+    except Exception as error:
+        return '\\text{' + str(error) + '}'
 
 
 # def simplify(input_text: str, expand: bool, variable: str = 'x') -> tuple[str, str]:

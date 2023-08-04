@@ -31,7 +31,7 @@ from typing import *
 # todo: debug 0^(1-1)
 # debugged "x- x"
 # debuged "1 - - --" appearing as 1-(-)
-# todo: raise error when log base is 0, 1, negative; log arg is <= 0
+# raised error when log base is 0, 1, negative; log arg is <= 0
 # debugged >=2 digits in base of log_(base)(arg)
 # todo: csc(x) / (1 / sin(x)) differentiated result no simplification to cot
 # log_(3)(1), log_(2)(234/99) debugged
@@ -1426,12 +1426,9 @@ class Pow(BinOp):
     """
 
     def __init__(self, base: Expr, exponent: Expr) -> None:
-        try:
-            if isinstance(base, Const) and base.name == 0 and isinstance(exponent, Const) and exponent.name < 0:
-                raise ZeroDivisionError
-            super().__init__(base, exponent)
-        except ZeroDivisionError:
-            print('You may not divide by zero. Please try again!')
+        if isinstance(base, Const) and base.name == 0 and isinstance(exponent, Const) and exponent.name < 0:
+            raise ZeroDivisionError
+        super().__init__(base, exponent)
 
     def __str__(self) -> str:
         return '( ' + str(self.left) + ') ^ ( ' + str(self.right) + ') '
@@ -2089,23 +2086,15 @@ def get_arrangement_type(expr: Expr) -> tuple:  # TODO: TEST
 
 class LogError(Exception):
     """Raised when the user attempts to define an invalid logarithm.
-
-    Instance Attributes:
-        - msg: the error message
     """
-    msg: str
 
-    def __init__(self) -> None:
-        self.msg = 'Logarithm is invalid!'
+    def __str__(self) -> str:
+        return 'Logarithm is invalid!'
 
 
 class TrigError(Exception):
     """Raised when the user tries to define an undefined trigonometric function.
-
-    Instance Attributes:
-        - msg: the error message
     """
-    msg: str
 
-    def __init__(self) -> None:
-        self.msg = 'The entered trigonometric function does not exist. Please try again!'
+    def __str__(self) -> str:
+        return 'The entered trigonometric function does not exist. Please try again!'
