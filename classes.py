@@ -1244,7 +1244,7 @@ class Multiply(BinOp):
             if isinstance(denominator, Const) and denominator.name == 1:
                 return numerator.fractionify(expand)
             else:
-                return Multiply(numerator.fractionify(expand), Pow(denominator.simplify(expand).rearrange().trig_simplify().rearrange().fractionify(expand), Const(-1)))
+                return Multiply(numerator.fractionify(expand), Pow(denominator.simplify(expand).rearrange().trig_simplify().rearrange(), Const(-1)))
         return Multiply(self.left.fractionify(expand), self.right.fractionify(expand))
 
 
@@ -1683,7 +1683,7 @@ class Pow(BinOp):
         if negative:
             if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
                 return Multiply(Const(1), Pow(self.left, Const(-1)))
-            return Multiply(Const(1), Pow(Pow(self.left, abs_of_exponent.simplify(expand)), Const(-1)))
+            return Multiply(Const(1), Pow(Pow(self.left, abs_of_exponent.simplify(expand).rearrange().trig_simplify().rearrange()), Const(-1)))
         return Pow(self.left.fractionify(expand), self.right.fractionify(expand))
 
 

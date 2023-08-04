@@ -414,6 +414,7 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
                     print('prev2: ' + str(prev2))
                     print('curr : ' + str(curr))
             simplified_input = curr.rearrange().trig_simplify().rearrange().fractionify(expand)
+            print(simplified_input)
 
             differentiated, steps = simplified_input.differentiate(variable)
             print('differentiated')
