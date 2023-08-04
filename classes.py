@@ -1232,7 +1232,10 @@ class Multiply(BinOp):
                         # Don't do anything for sin_exp_abs == 0
 
         if isinstance(self.left, Multiply):
-            lr_and_r_trig_simplified = Multiply(self.left.right, self.right).trig_simplify()
+            left_simplified = self.left.trig_simplify()
+            if str(left_simplified) != str(self.left):
+                return Multiply(left_simplified, self.right.trig_simplify()).trig_simplify()
+            lr_and_r_trig_simplified = Multiply(self.left.right.trig_simplify(), self.right.trig_simplify()).trig_simplify()
             if str(lr_and_r_trig_simplified) != str(Multiply(self.left.right, self.right)):
                 return Multiply(self.left.left.trig_simplify(), lr_and_r_trig_simplified).trig_simplify()
 
