@@ -36,6 +36,10 @@ from typing import *
 # debugged csc(x) / (1 / sin(x)) differentiated result no simplification to cot
 # log_(3)(1), log_(2)(234/99) debugged
 # made it so error messages are displayed in latex
+# todo: log_(1/2)(1/2^x) simplification
+# debugged issues with csc sec cot simplification
+# todo: trig sin(0) and stuff
+# todo: implement trig identities
 
 
 class Expr:
@@ -769,9 +773,9 @@ class Multiply(BinOp):
                                 Pow(denominator_abs.simplify(expand), Const(-1)).simplify(expand)).simplify(expand)
 
         # Preventing simplification of 1 * (something ^ -1) into (something ^ -1)
-        if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
-            if isinstance(self.left, Const) and self.left.name == 1:
-                return Multiply(Const(1), Pow(self.right.left.simplify(expand), Const(-1)))
+        # if isinstance(self.right, Pow) and isinstance(self.right.right, Const) and self.right.right.name == -1:
+        #     if isinstance(self.left, Const) and self.left.name == 1:
+        #         return Multiply(Const(1), Pow(self.right.left.simplify(expand), Const(-1)).simplify(expand))
 
         if expand:
             if isinstance(self.left, Plus):
