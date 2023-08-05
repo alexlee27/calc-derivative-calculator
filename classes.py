@@ -41,6 +41,7 @@ from typing import *
 # todo: trig sin(0) and stuff
 # todo: implement trig identities
 # debugged 1/2^x appearing as 1/2^(1x)
+# todo: debug cot(x)^(a), cot(x)^(sin(x)) (simplification for trig with non integer exponents)
 
 
 class Expr:
@@ -1234,9 +1235,11 @@ class Multiply(BinOp):
         if isinstance(self.left, Multiply):
             left_simplified = self.left.trig_simplify()
             if str(left_simplified) != str(self.left):
-                return Multiply(left_simplified, self.right.trig_simplify()).trig_simplify()
-            lr_and_r_trig_simplified = Multiply(self.left.right.trig_simplify(), self.right.trig_simplify()).trig_simplify()
+                print('here')
+                return Multiply(left_simplified, self.right).trig_simplify()
+            lr_and_r_trig_simplified = Multiply(self.left.right, self.right).trig_simplify()
             if str(lr_and_r_trig_simplified) != str(Multiply(self.left.right, self.right)):
+                print('there')
                 return Multiply(self.left.left.trig_simplify(), lr_and_r_trig_simplified).trig_simplify()
 
         return Multiply(self.left.trig_simplify(), self.right.trig_simplify())
@@ -1647,6 +1650,7 @@ class Pow(BinOp):
     def trig_simplify(self) -> Expr:
         if isinstance(self.left, Trig) and self.left.name in {'sin', 'cos', 'tan', 'csc', 'sec', 'cot'}:
             negative, abs_of_exponent = is_minus(self.right, True)
+            abs_of_exponent = abs_of_exponent.simplify(False)
             if negative:
                 if self.left.name == 'sin':
                     if isinstance(abs_of_exponent, Const) and abs_of_exponent.name == 1:
