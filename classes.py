@@ -258,7 +258,6 @@ class Expr:
                 #     return self_base.name < other_base.name
             return False
 
-
 def not_int_or_float(expr: Expr) -> bool:
     """Return true if expr does NOT represent an int or a float."""
     return not (isinstance(expr, Const) and (isinstance(expr.name, int) or isinstance(expr.name, float)))
@@ -411,18 +410,22 @@ class Plus(BinOp):
         return '( ' + str(self.left) + '+ ' + str(self.right) + ') '
 
     def get_latex(self) -> str:
-        # self.right is a negative digit
-        if isinstance(self.right, Const) and (isinstance(self.right.name, int) or isinstance(self.right.name, float)) \
-                and self.right.name < 0:
-            return self.left.get_latex() + ' ' + self.right.get_latex()
+        # # self.right is a negative digit
+        # if isinstance(self.right, Const) and (isinstance(self.right.name, int) or isinstance(self.right.name, float)) \
+        #         and self.right.name < 0:
+        #     return self.left.get_latex() + ' ' + self.right.get_latex()
+        #
+        # # whatever + (negative digit * whatever)
+        # if isinstance(self.right, Multiply) and isinstance(self.right.left, Const) \
+        #         and (isinstance(self.right.left.name, int) or isinstance(self.right.left.name, float)) \
+        #         and self.right.left.name < 0:
+        #     right_latex = self.right.get_latex()
+        #     if right_latex[:5] != '\\frac':
+        #         return self.left.get_latex() + ' ' + right_latex
 
-        # whatever + (negative digit * whatever)
-        if isinstance(self.right, Multiply) and isinstance(self.right.left, Const) \
-                and (isinstance(self.right.left.name, int) or isinstance(self.right.left.name, float)) \
-                and self.right.left.name < 0:
-            right_latex = self.right.get_latex()
-            if right_latex[:5] != '\\frac':
-                return self.left.get_latex() + ' ' + right_latex
+        right_latex = self.right.get_latex()
+        if right_latex[0] == '-':
+            return self.left.get_latex() + ' ' + right_latex
 
         return self.left.get_latex() + '+ ' + self.right.get_latex()
 
@@ -689,24 +692,22 @@ class Multiply(BinOp):
             right_latex = '\\left( ' + right_latex + '\\right) '
 
         # digit * not a digit
-        if isinstance(self.left, Const) and (isinstance(self.left.name, int) or isinstance(self.left.name, float)):
-            if not (isinstance(self.right, Const)
+        if not (isinstance(self.right, Const)
                     and (isinstance(self.right.name, int) or isinstance(self.right.name, float))):
-                if self.left.name == -1:
+            if isinstance(self.left, Const) and self.left.name == -1:
+                return '- ' + right_latex
 
-                    return '- ' + right_latex
-                # else:
-                #     return left_latex + ' ' + right_latex
-
-        # digit * digit
-        if isinstance(self.right, Const) and (isinstance(self.right.name, int) or isinstance(self.right.name, float)):
+        # something * (digit...)
+        if ord('0') <= ord(right_latex[0]) <= ord('9'):
             return left_latex + '\\cdot ' + right_latex
 
-        # digit * (digit * something) (note: won't appear naturally)
-        if isinstance(self.right, Multiply):
-            if isinstance(self.right.left, Const) and (
-                    isinstance(self.right.left.name, int) or isinstance(self.right.left.name, float)):
-                return left_latex + '\\cdot ' + right_latex
+        # something * digit ^ ...
+        if right_latex[0:2] == '{ ' and ord('0') <= ord(right_latex[2]) <= ord('9'):
+            return left_latex + '\\cdot ' + right_latex
+
+        # something * frac
+        if right_latex[0:5] == '\\frac':
+            return left_latex + '\\cdot ' + right_latex
 
         return left_latex + ' ' + right_latex
 
