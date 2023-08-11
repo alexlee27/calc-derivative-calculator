@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 import main
+from multiprocessing import Pool, TimeoutError
 
 
 app = Flask(__name__)
@@ -22,12 +23,23 @@ def differentiate():
         expand_str = 'true'
     print(expand_bool)
     print(input_text)
-    input_simplified, differentiated, input_simplified_string, differentiated_string, steps_latex, steps_explanation, steps_explanation_latex \
-        = main.differentiate(input_text, expand=expand_bool, variable=var_of_diff)
-    return jsonify({"input_simplified": input_simplified, "differentiated": differentiated,
-                    "input_simplified_string": input_simplified_string, "differentiated_string": differentiated_string,
-                    "expand": expand_str, "steps_latex": steps_latex, "steps_explanation": steps_explanation,
-                    "steps_explanation_latex": steps_explanation_latex})
+
+    with Pool(1) as pool:
+        result = pool.apply_async(main.differentiate, (input_text, expand_bool, var_of_diff))
+        try:
+            input_simplified, differentiated, input_simplified_string, differentiated_string, steps_latex, steps_explanation, steps_explanation_latex = result.get(timeout=7)
+            return jsonify({"input_simplified": input_simplified, "differentiated": differentiated,
+                            "input_simplified_string": input_simplified_string,
+                            "differentiated_string": differentiated_string,
+                            "expand": expand_str, "steps_latex": steps_latex, "steps_explanation": steps_explanation,
+                            "steps_explanation_latex": steps_explanation_latex})
+        except TimeoutError:
+            return jsonify({"input_simplified": "\\text{Timed out! Please try a less complex input.}", "differentiated": "\\text{Timed out! Please try a less complex input.}",
+                             "input_simplified_string": "",
+                             "differentiated_string": "",
+                             "expand": "", "steps_latex": "", "steps_explanation": "",
+                             "steps_explanation_latex": ""})
+
 
 # @app.route('/simplify', methods=['POST'])
 # def simplify():

@@ -445,6 +445,7 @@ def differentiate(input_text: str, expand: bool, variable: str = 'x') -> tuple[s
             return "\\displaystyle " + simplified_input.get_latex(), "\\displaystyle " + differentiated.get_latex(),\
                 str(simplified_input), str(differentiated), steps_latex, steps_explanation, steps_explanation_latex
     except Exception as error:
+        print(str(error))
         return '\\text{' + str(error) + '}', '', '', '', [], [], []
 
 
