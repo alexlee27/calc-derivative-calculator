@@ -2,48 +2,6 @@
 from __future__ import annotations
 from typing import *
 
-
-# todo: run a bunch of test cases for Plus.simplify, Plus.rearrange, Multiply.simplify, and Multiply.rearrange
-# x ^ e, x ^ pi, x ^ x works
-# Func ^ f(x) (e.g. ( ln ( e ) ) ^ x ) works
-# Func ^ Func (e.g. ( cos ( 1 ) ) ^ sin ( 1 ) ) works
-# filtered fractions in Multiply objects
-# (-1) ^ x, -1 ^ x, -(1 ^ x); fixed how input deals with negative signs with non-digits
-# 0 ^ Func and 0 ^ f(x) simplifies to 0
-# sorted by argument first for (trig) functions
-# implemented e ^ ln x = x simplification; a ^ (... * loga x * ...) = x ^ ... simplification (an O(n) algorithm that looks through all nodes in the exponent?)
-# implemented logx ( x )????
-# used gcd for fraction simplification
-# created new method call 'trig_simplify'
-# made it so non-constants can be used in logarithm base
-# implemented logarithm rules
-# implemented something + ( -1 * something ) = 0 simplification
-# implemented a ^ (b + c) = a^b * a^c (where b + c can't be simplified)
-# implemented simplification of a + b/c, a/b + c
-# detected a/b as digit
-# debugged -x^3 -1 -1
-# enabled clearing steps in html
-# debugged simplification/trig simplification for sin(x)+cos(x)+tan(x)+cot(x)+csc(x)+sec(x)
-# implemented differentiation for powers with fraction exponents
-# implemented arrangement order for a/b
-# implemented arccsc, arcsec, arccot
-# todo: forbid spaces between digits in main tokenizer
-# todo: debug 0^(1-1)
-# debugged "x- x"
-# debuged "1 - - --" appearing as 1-(-)
-# raised error when log base is 0, 1, negative; log arg is <= 0
-# debugged >=2 digits in base of log_(base)(rg)
-# debugged csc(x) / (1 / sin(x)) differentiated result no simplification to cot
-# log_(3)(1), log_(2)(234/99) debugged
-# made it so error messages are displayed in latex
-# todo: log_(1/2)(1/2^x) simplification
-# debugged issues with csc sec cot simplification
-# todo: trig sin(0) and stuff
-# todo: implement trig identities
-# debugged 1/2^x appearing as 1/2^(1x)
-# todo: debug cot(x)^(a), cot(x)^(sin(x)) (simplification for trig with non integer exponents)
-
-
 class Expr:
     """An abstract class representing a mathematial expression.
     """
@@ -1490,7 +1448,8 @@ class Pow(BinOp):
                         return '\\sqrt[' + str(n) + ']{' + self.left.get_latex() + '}'
 
         if isinstance(self.left, Trig) and not (isinstance(self.right, Const) and self.right.name == -1):
-            return '{ \\' + self.left.name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
+            trig_name = '\\text{ ' + self.left.name + '}' if self.left.name in {'arccsc', 'arcsec', 'arccot'} else '\\' + self.left.name + ''
+            return '{ ' + trig_name + '} ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
         if isinstance(self.left, Log) and not (isinstance(self.right, Const) and self.right.name == -1):
             if isinstance(self.left.base, Const) and self.left.base.name == 'e':
                 return '{ \\ln } ' + '^' + '{ ' + self.right.get_latex() + '} ' + '\\left( ' + self.left.arg.get_latex() + '\\right) '
