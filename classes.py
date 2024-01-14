@@ -337,8 +337,10 @@ class Func(Expr):
     def __init__(self, arg: Expr) -> None:
         self.arg = arg
 
+
     # def __len__(self) -> int:
     #     return len(self.arg)
+
 
 
 class Plus(BinOp):
@@ -1075,7 +1077,6 @@ class Multiply(BinOp):
             digit_tree = get_digit_tree(i, lst, digit_tree)
             return digit_tree
 
-        # todo: try using memoization??
 
         # # Deal with everything else... except for numbers (coefficients)
         #
@@ -1734,6 +1735,9 @@ class Trig(Func):
             return '\\text{' + self.name + '} \\left( ' + self.arg.get_latex() + '\\right) '
         return '\\' + self.name + ' \\left( ' + self.arg.get_latex() + '\\right) '
 
+    def rearrange(self) -> Expr:
+        return Trig(self.name, self.arg.rearrange())
+
     def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if self.name == 'sin':
             steps = [(Multiply(Trig('cos', self.arg), Diff(self.arg, respect_to)), 'Apply the following trigonometric differentiation rule and the chain rule: ',
@@ -1926,6 +1930,9 @@ class Log(Func):
             return '\\ln \\left( ' + self.arg.get_latex() + '\\right) '
         else:
             return '\\log_{' + self.base.get_latex() + '} \\left( ' + self.arg.get_latex() + '\\right) '
+
+    def rearrange(self) -> Expr:
+        return Log(self.base.rearrange(), self.arg.rearrange())
 
     def differentiate(self, respect_to: str) -> tuple[Expr, list]:
         if respect_to != 'c':
